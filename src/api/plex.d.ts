@@ -1,12 +1,10 @@
 /**
- * Plex API Client
+ * Plex Authentication API
  *
- * Communicates with Plex via Netlify Functions backend proxy
- * to bypass CORS restrictions. The backend proxies requests to:
- * - https://plex.tv/api/v2 (for authentication)
- * - https://clients.plex.tv/api/v2 (for resources)
+ * Handles authentication with Plex via Netlify Functions backend proxy
+ * The backend proxies requests to https://plex.tv/api/v2
  */
-interface PinResponse {
+export interface PinResponse {
     id: number;
     code: string;
     product: string;
@@ -24,13 +22,38 @@ interface PinResponse {
     expiresAt: number;
     authToken?: string;
 }
-interface AuthToken {
-    accessToken: string;
-    createdAt: number;
-    expiresAt: number;
+export interface UserInfo {
+    id: number;
+    uuid: string;
+    username: string;
+    email: string;
+    locale: string;
+    confirmed: boolean;
+    joinedAt: number;
+    emailOnlyAuth: boolean;
+    certificateVersion: number;
+    thumb: string;
+    hasPassword: boolean;
+    homeSize: number;
+    homeAdmin: boolean;
 }
-declare class PlexApiClient {
-    private client;
+export interface ResourceServer {
+    name: string;
+    address: string;
+    port: number;
+    accessToken: string;
+    protocol: string;
+    baseuri: string;
+    machineIdentifier: string;
+    createdAt: number;
+    updatedAt: number;
+    version: string;
+}
+/**
+ * Authentication API Client
+ * Handles PIN creation, validation, and token exchange
+ */
+declare class AuthApiClient {
     private clientId;
     private token?;
     constructor(clientId: string, token?: string);
@@ -48,17 +71,25 @@ declare class PlexApiClient {
      * Get current user information
      * Used to validate token and get user details
      */
-    getCurrentUser(): Promise<any>;
+    getCurrentUser(): Promise<UserInfo>;
     /**
      * Get available Plex Media Servers
      * Returns list of servers accessible to the user
      */
-    getResources(): Promise<any>;
+    getResources(): Promise<ResourceServer[]>;
     setToken(token: string): void;
     getToken(): string | undefined;
 }
-export declare function initPlexClient(clientId: string, token?: string): PlexApiClient;
-export declare function getPlexClient(): PlexApiClient;
-export type { PinResponse, AuthToken };
-export default PlexApiClient;
+/**
+ * Initialize the Plex authentication client
+ */
+export declare function initPlexClient(clientId: string, token?: string): AuthApiClient;
+/**
+ * Get the current Plex client instance
+ */
+export declare function getPlexClient(): AuthApiClient;
+/**
+ * Export AuthApiClient for direct use
+ */
+export { AuthApiClient };
 //# sourceMappingURL=plex.d.ts.map

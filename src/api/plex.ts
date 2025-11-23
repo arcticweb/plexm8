@@ -1,15 +1,13 @@
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
 
 /**
- * Plex API Client
+ * Plex Authentication API
  * 
- * Communicates with Plex via Netlify Functions backend proxy
- * to bypass CORS restrictions. The backend proxies requests to:
- * - https://plex.tv/api/v2 (for authentication)
- * - https://clients.plex.tv/api/v2 (for resources)
+ * Handles authentication with Plex via Netlify Functions backend proxy
+ * The backend proxies requests to https://plex.tv/api/v2
  */
 
-interface PinResponse {
+export interface PinResponse {
   id: number;
   code: string;
   product: string;
@@ -28,27 +26,46 @@ interface PinResponse {
   authToken?: string;
 }
 
-interface AuthToken {
-  accessToken: string;
-  createdAt: number;
-  expiresAt: number;
+export interface UserInfo {
+  id: number;
+  uuid: string;
+  username: string;
+  email: string;
+  locale: string;
+  confirmed: boolean;
+  joinedAt: number;
+  emailOnlyAuth: boolean;
+  certificateVersion: number;
+  thumb: string;
+  hasPassword: boolean;
+  homeSize: number;
+  homeAdmin: boolean;
 }
 
-class PlexApiClient {
-  private client: AxiosInstance;
+export interface ResourceServer {
+  name: string;
+  address: string;
+  port: number;
+  accessToken: string;
+  protocol: string;
+  baseuri: string;
+  machineIdentifier: string;
+  createdAt: number;
+  updatedAt: number;
+  version: string;
+}
+
+/**
+ * Authentication API Client
+ * Handles PIN creation, validation, and token exchange
+ */
+class AuthApiClient {
   private clientId: string;
   private token?: string;
 
   constructor(clientId: string, token?: string) {
     this.clientId = clientId;
     this.token = token;
-
-    this.client = axios.create({
-      baseURL: '/.netlify/functions/auth',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
   }
 
   /**
@@ -56,12 +73,16 @@ class PlexApiClient {
    * Returns a PIN code that the user will claim via Plex auth app
    */
   async createPin(): Promise<PinResponse> {
-    const response = await this.client.post('/', null, {
-      params: { 
-        action: 'createPin',
-        clientId: this.clientId,
-      },
-    });
+    const response = await axios.post(
+      '/.netlify/functions/auth',
+      null,
+      {
+        params: {
+          action: 'createPin',
+          clientId: this.clientId,
+        },
+      }
+    );
     return response.data;
   }
 
@@ -70,7 +91,7 @@ class PlexApiClient {
    * Called after user claims the PIN in Plex auth app
    */
   async checkPin(pinId: number): Promise<PinResponse> {
-    const response = await this.client.get('/', {
+    const response = await axios.get('/.netlify/functions/auth', {
       params: {
         action: 'checkPin',
         pinId,
@@ -84,8 +105,8 @@ class PlexApiClient {
    * Get current user information
    * Used to validate token and get user details
    */
-  async getCurrentUser() {
-    const response = await this.client.get('/', {
+  async getCurrentUser(): Promise<UserInfo> {
+    const response = await axios.get('/.netlify/functions/auth', {
       params: {
         action: 'getUser',
         token: this.token,
@@ -99,9 +120,10 @@ class PlexApiClient {
    * Get available Plex Media Servers
    * Returns list of servers accessible to the user
    */
-  async getResources() {
-    const response = await this.client.get('/resources', {
+  async getResources(): Promise<ResourceServer[]> {
+    const response = await axios.get('/.netlify/functions/auth', {
       params: {
+        action: 'getResources',
         token: this.token,
         clientId: this.clientId,
         includeHttps: 1,
@@ -112,7 +134,7 @@ class PlexApiClient {
     return response.data;
   }
 
-  setToken(token: string) {
+  setToken(token: string): void {
     this.token = token;
   }
 
@@ -122,19 +144,31 @@ class PlexApiClient {
 }
 
 // Export singleton instance
-let plexClient: PlexApiClient | null = null;
+let plexClient: AuthApiClient | null = null;
 
-export function initPlexClient(clientId: string, token?: string): PlexApiClient {
-  plexClient = new PlexApiClient(clientId, token);
+/**
+ * Initialize the Plex authentication client
+ */
+export function initPlexClient(
+  clientId: string,
+  token?: string
+): AuthApiClient {
+  plexClient = new AuthApiClient(clientId, token);
   return plexClient;
 }
 
-export function getPlexClient(): PlexApiClient {
+/**
+ * Get the current Plex client instance
+ */
+export function getPlexClient(): AuthApiClient {
   if (!plexClient) {
     throw new Error('Plex client not initialized. Call initPlexClient first.');
   }
   return plexClient;
 }
 
-export type { PinResponse, AuthToken };
-export default PlexApiClient;
+/**
+ * Export AuthApiClient for direct use
+ */
+export { AuthApiClient };
+
