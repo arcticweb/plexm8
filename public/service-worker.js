@@ -1,7 +1,8 @@
 // Service Worker for PlexM8
 // Provides offline support and caching strategies
 
-const CACHE_NAME = 'plexm8-v1';
+// Increment this version whenever the service worker changes
+const CACHE_NAME = 'plexm8-v2';
 
 // Get base path from the service worker's scope
 const getBasePath = () => {
