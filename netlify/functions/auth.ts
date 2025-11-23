@@ -12,28 +12,10 @@
 
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import axios from 'axios';
+import { PLEX_CONFIG, getPlexHeaders, fillEndpointParams } from './config';
 
-// Plex API base URL
-const PLEX_API_BASE = 'https://plex.tv/api/v2';
-
-// Client configuration (should match frontend)
-const PLEX_PRODUCT = 'PlexM8';
-
-/**
- * Get common Plex API headers
- */
-function getPlexHeaders(token?: string): Record<string, string> {
-  const headers: Record<string, string> = {
-    'X-Plex-Product': PLEX_PRODUCT,
-    'Accept': 'application/json',
-  };
-
-  if (token) {
-    headers['X-Plex-Token'] = token;
-  }
-
-  return headers;
-}
+// Plex API base URL (public for authentication)
+const PLEX_API_BASE = PLEX_CONFIG.api.public;
 
 /**
  * POST /api/auth/pin
@@ -51,12 +33,11 @@ async function handleCreatePin(event: HandlerEvent) {
     }
 
     const response = await axios.post(
-      `${PLEX_API_BASE}/pins?strong=true`,
+      `${PLEX_API_BASE}${PLEX_CONFIG.auth.pins.create}`,
       null,
       {
         headers: {
-          ...getPlexHeaders(),
-          'X-Plex-Client-Identifier': clientId,
+          ...getPlexHeaders(undefined, clientId),
         },
       }
     );
@@ -100,12 +81,12 @@ async function handleCheckPin(
       };
     }
 
+    const pinEndpoint = fillEndpointParams(PLEX_CONFIG.auth.pins.check, { pinId });
     const response = await axios.get(
-      `${PLEX_API_BASE}/pins/${pinId}`,
+      `${PLEX_API_BASE}${pinEndpoint}`,
       {
         headers: {
-          ...getPlexHeaders(),
-          'X-Plex-Client-Identifier': clientId,
+          ...getPlexHeaders(undefined, clientId),
         },
       }
     );
@@ -151,11 +132,10 @@ async function handleGetUser(event: HandlerEvent) {
     }
 
     const response = await axios.get(
-      `${PLEX_API_BASE}/user`,
+      `${PLEX_API_BASE}${PLEX_CONFIG.auth.user}`,
       {
         headers: {
-          ...getPlexHeaders(token),
-          'X-Plex-Client-Identifier': clientId,
+          ...getPlexHeaders(token, clientId),
         },
       }
     );

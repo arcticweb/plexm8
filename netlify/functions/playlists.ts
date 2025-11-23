@@ -12,25 +12,10 @@
 
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import axios from 'axios';
+import { PLEX_CONFIG, getPlexHeaders } from './config';
 
-// Plex API base URL (for server/resource endpoints)
-const PLEX_API_BASE = 'https://clients.plex.tv/api/v2';
-
-/**
- * Get common Plex API headers
- */
-function getPlexHeaders(token?: string): Record<string, string> {
-  const headers: Record<string, string> = {
-    'X-Plex-Product': 'PlexM8',
-    'Accept': 'application/json',
-  };
-
-  if (token) {
-    headers['X-Plex-Token'] = token;
-  }
-
-  return headers;
-}
+// Plex API base URL (clients for PMS access)
+const PLEX_API_CLIENTS = PLEX_CONFIG.api.clients;
 
 /**
  * Main handler
