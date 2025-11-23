@@ -2,12 +2,16 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/app.css';
+import { getBasePath } from './utils/basePath';
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    const basePath = getBasePath();
+    const swPath = `${basePath}service-worker.js`;
+    
     navigator.serviceWorker
-      .register('/plexm8/service-worker.js')
+      .register(swPath)
       .then((registration) => {
         console.log('Service Worker registered:', registration);
       })

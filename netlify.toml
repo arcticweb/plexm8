@@ -16,7 +16,8 @@
 
 # Context-specific settings for different deployment environments
 [context.production]
-  environment = { VITE_APP_BASE_PATH = "/plexm8/" }
+  # Netlify root is /, GitHub Pages is /plexm8/
+  environment = { VITE_APP_BASE_PATH = "/" }
 
 [context.deploy-preview]
   environment = { VITE_APP_BASE_PATH = "/" }
