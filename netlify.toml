@@ -27,14 +27,11 @@
 
 # Headers for security and CORS
 [[headers]]
-  for = "/api/*"
+  for = "/.netlify/functions/*"
   [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS, PUT, DELETE"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     X-XSS-Protection = "1; mode=block"
-
-# Redirect rules
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200

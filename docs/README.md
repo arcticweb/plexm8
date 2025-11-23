@@ -14,8 +14,10 @@ Complete documentation for PlexM8, a Smart Playlist Manager for Plex Media Serve
 - **[Project Structure](./structure.md)** - Complete file organization, component hierarchy, development patterns
 
 ### Integration & Deployment
-- **[Plex API Guide](./api/plex-integration.md)** - Plex API usage, authentication flow, implementation details
+- **[Multi-Platform Deployment Guide](./MULTI_PLATFORM_DEPLOYMENT.md)** - Netlify (primary), GitHub Pages, Vercel, Firebase, self-hosted options
+- **[Netlify Deployment](./netlify-deployment.md)** - Netlify setup, functions configuration, auto-deployment
 - **[Deployment Guide](./deployment.md)** - GitHub Pages setup, GitHub Actions workflow, production deployment
+- **[Plex API Guide](./api/plex-integration.md)** - Plex API usage, authentication flow, implementation details
 - **[PWA Setup](./pwa-setup.md)** - Progressive Web App configuration, installation, offline support
 
 ### Advanced Topics
@@ -66,6 +68,27 @@ npm run format
 # Build for production
 npm run build
 ```
+
+### Deployment
+
+```bash
+# Load PowerShell utilities (Windows)
+. ./scripts/plexm8-utils.ps1
+
+# Check project status
+Check-ProjectStatus
+
+# Deploy to Netlify (preview)
+Deploy-ToNetlify
+
+# Deploy to Netlify (production)
+Deploy-ToNetlify -Production
+
+# Full workflow: update, build, test, deploy
+Update-Project
+```
+
+See [Multi-Platform Deployment Guide](./MULTI_PLATFORM_DEPLOYMENT.md) for all deployment options.
 
 ## Architecture Overview
 

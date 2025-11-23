@@ -199,33 +199,52 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     };
   }
 
-  const path = event.path || '';
+  // Netlify Functions path structure:
+  // /.netlify/functions/auth           -> event.path = '/'
+  // /.netlify/functions/auth/pin       -> event.path = '/pin' OR '/auth/pin'
+  // /.netlify/functions/auth/pin/1234  -> event.path = '/pin/1234' OR '/auth/pin/1234'
+  
+  const fullPath = event.path || '';
+  // Remove /auth prefix if present (from /.netlify/functions/auth)
+  const path = fullPath.replace(/^\/auth/, '').split('?')[0];
+
+  console.log('Netlify Function called:', {
+    fullPath,
+    path,
+    method: event.httpMethod,
+    queryStringParameters: event.queryStringParameters,
+  });
 
   try {
-    // Route: POST /auth/pin or /api/auth/pin
-    if ((path.match(/^\/pin$/) || path.match(/\/api\/auth\/pin$/)) && event.httpMethod === 'POST') {
+    // Route: POST /.netlify/functions/auth/pin
+    if ((path === '' || path === '/' || path === '/pin') && event.httpMethod === 'POST') {
       const response = await handleCreatePin(event);
       return { ...response, headers };
     }
 
-    // Route: GET /auth/pin/:id or /api/auth/pin/:id
-    if ((path.match(/^\/pin\/\d+$/) || path.match(/\/api\/auth\/pin\/\d+$/)) && event.httpMethod === 'GET') {
+    // Route: GET /.netlify/functions/auth/pin/:id
+    if (path.match(/^\/pin\/\d+$/) && event.httpMethod === 'GET') {
       const pinId = path.split('/').pop()!;
       const response = await handleCheckPin(event, pinId);
       return { ...response, headers };
     }
 
-    // Route: GET /auth/user or /api/auth/user
-    if ((path.match(/^\/user$/) || path.match(/\/api\/auth\/user$/)) && event.httpMethod === 'GET') {
+    // Route: GET /.netlify/functions/auth/user
+    if ((path === '/user') && event.httpMethod === 'GET') {
       const response = await handleGetUser(event);
       return { ...response, headers };
     }
 
     // 404 - Unknown endpoint
+    console.log('No route matched for path:', path);
     return {
       statusCode: 404,
       headers,
-      body: JSON.stringify({ error: 'Endpoint not found' }),
+      body: JSON.stringify({ 
+        error: 'Endpoint not found',
+        receivedPath: path,
+        fullPath: fullPath,
+      }),
     };
   } catch (error) {
     console.error('Unhandled error:', error);
