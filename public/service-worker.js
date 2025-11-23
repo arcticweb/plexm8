@@ -2,10 +2,19 @@
 // Provides offline support and caching strategies
 
 const CACHE_NAME = 'plexm8-v1';
+
+// Get base path from the service worker's scope
+const getBasePath = () => {
+  // The service worker scope is set to the app's base path
+  const scopePath = self.registration?.scope || '/plexm8/';
+  return new URL(scopePath).pathname;
+};
+
+const BASE_PATH = getBasePath();
 const ASSETS_TO_CACHE = [
-  '/plexm8/',
-  '/plexm8/index.html',
-  '/plexm8/manifest.json',
+  BASE_PATH,
+  `${BASE_PATH}index.html`,
+  `${BASE_PATH}manifest.json`,
 ];
 
 // Install event: cache essential assets

@@ -12,6 +12,7 @@ pnpm-lock.yaml
 dist/
 dist-ssr/
 *.local
+manifest.json
 
 # Generated TypeScript files (compiled JavaScript and declarations)
 # Exclude generated .js and .d.ts files from tsc output, 

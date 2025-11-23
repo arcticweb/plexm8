@@ -34,24 +34,11 @@ const manifest = {
     },
   ],
   categories: ['music', 'productivity'],
-  screenshots: [
-    {
-      src: `${basePath}screenshots/screenshot-540x720.png`,
-      sizes: '540x720',
-      type: 'image/png',
-      form_factor: 'narrow',
-    },
-    {
-      src: `${basePath}screenshots/screenshot-1280x720.png`,
-      sizes: '1280x720',
-      type: 'image/png',
-      form_factor: 'wide',
-    },
-  ],
+  screenshots: [],
 };
 
-// Write manifest to dist directory during build
-const outputPath = path.join(process.cwd(), 'dist', 'manifest.json');
+// Write manifest to public directory so Vite copies it to dist
+const outputPath = path.join(process.cwd(), 'public', 'manifest.json');
 const outputDir = path.dirname(outputPath);
 
 if (!fs.existsSync(outputDir)) {
