@@ -19,9 +19,9 @@ manifest.json
 # but include source .d.ts files
 src/**/*.js
 src/**/*.js.map
-!src/**/*.d.ts
 src/**/*.d.ts.map
-!src/**/*.config.js
+src/config/*.js
+src/config/*.d.ts
 
 # Editor directories and files
 .vscode/*
