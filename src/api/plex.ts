@@ -3,8 +3,10 @@ import axios, { AxiosInstance } from 'axios';
 /**
  * Plex API Client
  * 
- * Implements the Plex Media Server API following OAuth and JWT authentication patterns.
- * See: https://developer.plex.tv/pms/
+ * Communicates with Plex via Netlify Functions backend proxy
+ * to bypass CORS restrictions. The backend proxies requests to:
+ * - https://plex.tv/api/v2 (for authentication)
+ * - https://clients.plex.tv/api/v2 (for resources)
  */
 
 interface PinResponse {
@@ -42,29 +44,11 @@ class PlexApiClient {
     this.token = token;
 
     this.client = axios.create({
-      baseURL: 'https://plex.tv/api/v2',
-      headers: this.getHeaders(),
+      baseURL: '/.netlify/functions/auth',
+      headers: {
+        'Accept': 'application/json',
+      },
     });
-  }
-
-  private getHeaders(): Record<string, string | undefined> {
-    return {
-      'X-Plex-Product': 'PlexM8',
-      'X-Plex-Client-Identifier': this.clientId,
-      'X-Plex-Token': this.token,
-      'X-Plex-Platform': this.getPlatform(),
-      'X-Plex-Device-Name': 'PlexM8 Web',
-      'Accept': 'application/json',
-    };
-  }
-
-  private getPlatform(): string {
-    const ua = navigator.userAgent;
-    if (ua.includes('Android')) return 'Android';
-    if (ua.includes('Mac')) return 'macOS';
-    if (ua.includes('Windows')) return 'Windows';
-    if (ua.includes('Linux')) return 'Linux';
-    return 'Web';
   }
 
   /**
@@ -72,8 +56,8 @@ class PlexApiClient {
    * Returns a PIN code that the user will claim via Plex auth app
    */
   async createPin(): Promise<PinResponse> {
-    const response = await this.client.post('/auth/pin', null, {
-      params: { strong: true },
+    const response = await this.client.post('/pin', null, {
+      params: { clientId: this.clientId },
     });
     return response.data;
   }
@@ -83,7 +67,9 @@ class PlexApiClient {
    * Called after user claims the PIN in Plex auth app
    */
   async checkPin(pinId: number): Promise<PinResponse> {
-    const response = await this.client.get(`/auth/pin/${pinId}`);
+    const response = await this.client.get(`/pin/${pinId}`, {
+      params: { clientId: this.clientId },
+    });
     return response.data;
   }
 
@@ -93,7 +79,10 @@ class PlexApiClient {
    */
   async getCurrentUser() {
     const response = await this.client.get('/user', {
-      headers: this.getHeaders(),
+      params: {
+        token: this.token,
+        clientId: this.clientId,
+      },
     });
     return response.data;
   }
@@ -105,18 +94,18 @@ class PlexApiClient {
   async getResources() {
     const response = await this.client.get('/resources', {
       params: {
+        token: this.token,
+        clientId: this.clientId,
         includeHttps: 1,
         includeRelay: 1,
         includeIPv6: 1,
       },
-      headers: this.getHeaders(),
     });
     return response.data;
   }
 
   setToken(token: string) {
     this.token = token;
-    this.client.defaults.headers.common['X-Plex-Token'] = token;
   }
 
   getToken(): string | undefined {

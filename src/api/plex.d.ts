@@ -1,8 +1,10 @@
 /**
  * Plex API Client
  *
- * Implements the Plex Media Server API following OAuth and JWT authentication patterns.
- * See: https://developer.plex.tv/pms/
+ * Communicates with Plex via Netlify Functions backend proxy
+ * to bypass CORS restrictions. The backend proxies requests to:
+ * - https://plex.tv/api/v2 (for authentication)
+ * - https://clients.plex.tv/api/v2 (for resources)
  */
 interface PinResponse {
     id: number;
@@ -32,8 +34,6 @@ declare class PlexApiClient {
     private clientId;
     private token?;
     constructor(clientId: string, token?: string);
-    private getHeaders;
-    private getPlatform;
     /**
      * Create a PIN for authentication
      * Returns a PIN code that the user will claim via Plex auth app
