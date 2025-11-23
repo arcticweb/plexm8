@@ -202,21 +202,21 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
   const path = event.path || '';
 
   try {
-    // Route: POST /api/auth/pin
-    if (path.match(/\/api\/auth\/pin$/) && event.httpMethod === 'POST') {
+    // Route: POST /auth/pin or /api/auth/pin
+    if ((path.match(/^\/pin$/) || path.match(/\/api\/auth\/pin$/)) && event.httpMethod === 'POST') {
       const response = await handleCreatePin(event);
       return { ...response, headers };
     }
 
-    // Route: GET /api/auth/pin/:id
-    if (path.match(/\/api\/auth\/pin\/\d+$/) && event.httpMethod === 'GET') {
+    // Route: GET /auth/pin/:id or /api/auth/pin/:id
+    if ((path.match(/^\/pin\/\d+$/) || path.match(/\/api\/auth\/pin\/\d+$/)) && event.httpMethod === 'GET') {
       const pinId = path.split('/').pop()!;
       const response = await handleCheckPin(event, pinId);
       return { ...response, headers };
     }
 
-    // Route: GET /api/auth/user
-    if (path.match(/\/api\/auth\/user$/) && event.httpMethod === 'GET') {
+    // Route: GET /auth/user or /api/auth/user
+    if ((path.match(/^\/user$/) || path.match(/\/api\/auth\/user$/)) && event.httpMethod === 'GET') {
       const response = await handleGetUser(event);
       return { ...response, headers };
     }
