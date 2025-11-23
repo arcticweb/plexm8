@@ -56,8 +56,11 @@ class PlexApiClient {
    * Returns a PIN code that the user will claim via Plex auth app
    */
   async createPin(): Promise<PinResponse> {
-    const response = await this.client.post('/pin', null, {
-      params: { clientId: this.clientId },
+    const response = await this.client.post('/', null, {
+      params: { 
+        action: 'createPin',
+        clientId: this.clientId,
+      },
     });
     return response.data;
   }
@@ -67,8 +70,12 @@ class PlexApiClient {
    * Called after user claims the PIN in Plex auth app
    */
   async checkPin(pinId: number): Promise<PinResponse> {
-    const response = await this.client.get(`/pin/${pinId}`, {
-      params: { clientId: this.clientId },
+    const response = await this.client.get('/', {
+      params: {
+        action: 'checkPin',
+        pinId,
+        clientId: this.clientId,
+      },
     });
     return response.data;
   }
@@ -78,8 +85,9 @@ class PlexApiClient {
    * Used to validate token and get user details
    */
   async getCurrentUser() {
-    const response = await this.client.get('/user', {
+    const response = await this.client.get('/', {
       params: {
+        action: 'getUser',
         token: this.token,
         clientId: this.clientId,
       },

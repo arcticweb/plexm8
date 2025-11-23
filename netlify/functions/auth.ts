@@ -180,6 +180,8 @@ async function handleGetUser(event: HandlerEvent) {
 
 /**
  * Main handler
+ * Uses query parameters to route actions since Netlify Functions
+ * don't support sub-path routing (all requests go to /.netlify/functions/auth)
  */
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   // Enable CORS
@@ -199,51 +201,49 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     };
   }
 
-  // Netlify Functions path structure:
-  // /.netlify/functions/auth           -> event.path = '/'
-  // /.netlify/functions/auth/pin       -> event.path = '/pin' OR '/auth/pin'
-  // /.netlify/functions/auth/pin/1234  -> event.path = '/pin/1234' OR '/auth/pin/1234'
-  
-  const fullPath = event.path || '';
-  // Remove /auth prefix if present (from /.netlify/functions/auth)
-  const path = fullPath.replace(/^\/auth/, '').split('?')[0];
+  // Get action from query parameters
+  const action = event.queryStringParameters?.action;
 
   console.log('Netlify Function called:', {
-    fullPath,
-    path,
+    action,
     method: event.httpMethod,
     queryStringParameters: event.queryStringParameters,
   });
 
   try {
-    // Route: POST /.netlify/functions/auth/pin
-    if ((path === '' || path === '/' || path === '/pin') && event.httpMethod === 'POST') {
+    // Route: POST /?action=createPin
+    if (action === 'createPin' && event.httpMethod === 'POST') {
       const response = await handleCreatePin(event);
       return { ...response, headers };
     }
 
-    // Route: GET /.netlify/functions/auth/pin/:id
-    if (path.match(/^\/pin\/\d+$/) && event.httpMethod === 'GET') {
-      const pinId = path.split('/').pop()!;
+    // Route: GET /?action=checkPin&pinId=123
+    if (action === 'checkPin' && event.httpMethod === 'GET') {
+      const pinId = event.queryStringParameters?.pinId;
+      if (!pinId) {
+        return {
+          statusCode: 400,
+          headers,
+          body: JSON.stringify({ error: 'Missing pinId parameter' }),
+        };
+      }
       const response = await handleCheckPin(event, pinId);
       return { ...response, headers };
     }
 
-    // Route: GET /.netlify/functions/auth/user
-    if ((path === '/user') && event.httpMethod === 'GET') {
+    // Route: GET /?action=getUser
+    if (action === 'getUser' && event.httpMethod === 'GET') {
       const response = await handleGetUser(event);
       return { ...response, headers };
     }
 
-    // 404 - Unknown endpoint
-    console.log('No route matched for path:', path);
+    // Missing action parameter
     return {
-      statusCode: 404,
+      statusCode: 400,
       headers,
       body: JSON.stringify({ 
-        error: 'Endpoint not found',
-        receivedPath: path,
-        fullPath: fullPath,
+        error: 'Missing action parameter',
+        validActions: ['createPin', 'checkPin', 'getUser'],
       }),
     };
   } catch (error) {
