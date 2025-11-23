@@ -11,7 +11,7 @@ import PlaylistManager from '../components/PlaylistManager';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { token, clearAuth } = useAuthStore();
+  const { clearAuth } = useAuthStore();
 
   const handleLogout = () => {
     clearAuth();

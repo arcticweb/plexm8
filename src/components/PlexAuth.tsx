@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuthStore, getOrCreateClientId } from '../utils/storage';
-import { getPlexClient, initPlexClient } from '../api/plex';
+import { initPlexClient } from '../api/plex';
 
 /**
  * PlexAuth Component

@@ -46,9 +46,11 @@ export function useCurrentUser() {
   const fetchUser = useCallback(async () => {
     try {
       const client = getPlexClient();
-      return await api.call(() => client.getCurrentUser());
+      const result = await api.call(() => client.getCurrentUser());
+      return result;
     } catch (error) {
       console.error('Failed to fetch user:', error);
+      throw error;
     }
   }, [api]);
 
@@ -64,9 +66,11 @@ export function useResources() {
   const fetchResources = useCallback(async () => {
     try {
       const client = getPlexClient();
-      return await api.call(() => client.getResources());
+      const result = await api.call(() => client.getResources());
+      return result;
     } catch (error) {
       console.error('Failed to fetch resources:', error);
+      throw error;
     }
   }, [api]);
 

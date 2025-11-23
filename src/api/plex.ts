@@ -7,16 +7,6 @@ import axios, { AxiosInstance } from 'axios';
  * See: https://developer.plex.tv/pms/
  */
 
-interface PlexHeaders {
-  'X-Plex-Product': string;
-  'X-Plex-Client-Identifier': string;
-  'X-Plex-Token'?: string;
-  'X-Plex-Platform'?: string;
-  'X-Plex-Platform-Version'?: string;
-  'X-Plex-Device-Name'?: string;
-  'Accept': string;
-}
-
 interface PinResponse {
   id: number;
   code: string;
@@ -57,7 +47,7 @@ class PlexApiClient {
     });
   }
 
-  private getHeaders(): PlexHeaders {
+  private getHeaders(): Record<string, string | undefined> {
     return {
       'X-Plex-Product': 'PlexM8',
       'X-Plex-Client-Identifier': this.clientId,
