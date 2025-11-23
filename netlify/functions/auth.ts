@@ -51,10 +51,9 @@ async function handleCreatePin(event: HandlerEvent) {
     }
 
     const response = await axios.post(
-      `${PLEX_API_BASE}/auth/pin`,
+      `${PLEX_API_BASE}/pins?strong=true`,
       null,
       {
-        params: { strong: true },
         headers: {
           ...getPlexHeaders(),
           'X-Plex-Client-Identifier': clientId,
@@ -68,11 +67,16 @@ async function handleCreatePin(event: HandlerEvent) {
     };
   } catch (error) {
     console.error('Error creating PIN:', error);
+    const errorMessage = axios.isAxiosError(error) 
+      ? `Plex API error: ${error.response?.status} ${error.response?.statusText}`
+      : error instanceof Error ? error.message : 'Unknown error';
+    
     return {
       statusCode: 500,
       body: JSON.stringify({ 
         error: 'Failed to create authentication PIN',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: errorMessage,
+        details: axios.isAxiosError(error) ? error.response?.data : undefined,
       }),
     };
   }
@@ -97,7 +101,7 @@ async function handleCheckPin(
     }
 
     const response = await axios.get(
-      `${PLEX_API_BASE}/auth/pin/${pinId}`,
+      `${PLEX_API_BASE}/pins/${pinId}`,
       {
         headers: {
           ...getPlexHeaders(),
