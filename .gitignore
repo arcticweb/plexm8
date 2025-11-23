@@ -14,9 +14,11 @@ dist-ssr/
 *.local
 
 # Generated TypeScript files (compiled JavaScript and declarations)
+# Exclude generated .js and .d.ts files from tsc output, 
+# but include source .d.ts files
 src/**/*.js
 src/**/*.js.map
-src/**/*.d.ts
+!src/**/*.d.ts
 src/**/*.d.ts.map
 !src/**/*.config.js
 
