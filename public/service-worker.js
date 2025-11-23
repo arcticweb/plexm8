@@ -6,7 +6,8 @@ const CACHE_NAME = 'plexm8-v1';
 // Get base path from the service worker's scope
 const getBasePath = () => {
   // The service worker scope is set to the app's base path
-  const scopePath = self.registration?.scope || '/plexm8/';
+  // For Netlify, this will be '/', for GitHub Pages it will be '/plexm8/'
+  const scopePath = self.registration?.scope || '/';
   return new URL(scopePath).pathname;
 };
 

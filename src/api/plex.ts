@@ -74,14 +74,8 @@ class AuthApiClient {
    */
   async createPin(): Promise<PinResponse> {
     const response = await axios.post(
-      '/.netlify/functions/auth',
-      null,
-      {
-        params: {
-          action: 'createPin',
-          clientId: this.clientId,
-        },
-      }
+      `/.netlify/functions/auth?action=createPin&clientId=${this.clientId}`,
+      null
     );
     return response.data;
   }
@@ -91,13 +85,9 @@ class AuthApiClient {
    * Called after user claims the PIN in Plex auth app
    */
   async checkPin(pinId: number): Promise<PinResponse> {
-    const response = await axios.get('/.netlify/functions/auth', {
-      params: {
-        action: 'checkPin',
-        pinId,
-        clientId: this.clientId,
-      },
-    });
+    const response = await axios.get(
+      `/.netlify/functions/auth?action=checkPin&pinId=${pinId}&clientId=${this.clientId}`
+    );
     return response.data;
   }
 
@@ -106,13 +96,9 @@ class AuthApiClient {
    * Used to validate token and get user details
    */
   async getCurrentUser(): Promise<UserInfo> {
-    const response = await axios.get('/.netlify/functions/auth', {
-      params: {
-        action: 'getUser',
-        token: this.token,
-        clientId: this.clientId,
-      },
-    });
+    const response = await axios.get(
+      `/.netlify/functions/auth?action=getUser&token=${this.token}&clientId=${this.clientId}`
+    );
     return response.data;
   }
 
