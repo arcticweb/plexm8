@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page Not Found - PlexM8</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    
+    h1 {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      color: #e50914;
+    }
+    
+    p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      opacity: 0.8;
+    }
+    
+    a {
+      display: inline-block;
+      padding: 0.75rem 2rem;
+      background: #e50914;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 0.5rem;
+      transition: opacity 0.3s ease;
+    }
+    
+    a:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>404</h1>
+    <p>Page Not Found</p>
+    <p>The page you're looking for doesn't exist.</p>
+    <a href="/plexm8/">Return to PlexM8</a>
+  </div>
+  <script>
+    // Redirect to root for SPA routing on GitHub Pages
+    if (location.pathname !== '/plexm8/' && !location.pathname.endsWith('.html')) {
+      history.replaceState(null, null, '/plexm8/');
+      window.location.reload();
+    }
+  </script>
+</body>
+</html>
