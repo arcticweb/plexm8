@@ -28,9 +28,11 @@ export default function PlexAuth() {
       const pin = await client.createPin();
       setPinCode(pin.code);
 
-      // Open Plex auth app
-      const authUrl = `https://app.plex.tv/auth#?clientID=${clientId}&code=${pin.code}&context%5Bdevice%5D%5Bproduct%5D=PlexM8&forwardUrl=${encodeURIComponent(window.location.href)}`;
-      window.open(authUrl, '_blank');
+      // Open Plex auth app in a popup
+      // Note: We don't use forwardUrl here; instead we rely on polling to detect when auth is complete
+      // The popup will be closed automatically when authentication is complete
+      const authUrl = `https://app.plex.tv/auth#?clientID=${clientId}&code=${pin.code}&context%5Bdevice%5D%5Bproduct%5D=PlexM8`;
+      const authPopup = window.open(authUrl, 'PlexAuth', 'width=500,height=700');
 
       // Poll for token every 2 seconds for up to 5 minutes
       let attempts = 0;
@@ -48,6 +50,10 @@ export default function PlexAuth() {
             clearInterval(pollInterval);
             setIsAuthenticating(false);
             setPinCode(null);
+            // Close the auth popup if it's still open
+            if (authPopup && !authPopup.closed) {
+              authPopup.close();
+            }
           } else if (attempts > maxAttempts) {
             clearInterval(pollInterval);
             setIsAuthenticating(false);
