@@ -530,11 +530,27 @@ body {
   gap: var(--spacing-md);
   font-size: 0.75rem;
   color: var(--color-text-secondary);
+  align-items: center;
 }
 
 .server-item-version,
 .server-item-device {
   display: inline-block;
+}
+
+.server-item-status {
+  margin-left: auto;
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+.server-menu-item.offline {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.server-menu-item.offline:hover {
+  background: transparent;
 }
 
 .server-menu-error {

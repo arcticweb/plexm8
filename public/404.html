@@ -60,12 +60,12 @@
     <h1>404</h1>
     <p>Page Not Found</p>
     <p>The page you're looking for doesn't exist.</p>
-    <a href="/plexm8/">Return to PlexM8</a>
+    <a href="/">Return to PlexM8</a>
   </div>
   <script>
-    // Redirect to root for SPA routing on GitHub Pages
-    if (location.pathname !== '/plexm8/' && !location.pathname.endsWith('.html')) {
-      history.replaceState(null, null, '/plexm8/');
+    // Redirect to root for SPA routing
+    if (location.pathname !== '/' && !location.pathname.endsWith('.html')) {
+      history.replaceState(null, null, '/');
       window.location.reload();
     }
   </script>

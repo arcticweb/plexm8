@@ -40,8 +40,9 @@ export default function ServerSelector() {
       );
 
       // Response is an array at root level, not under MediaContainer
+      // Show all devices that provide server capability (includes online and offline servers)
       const fetchedServers = (Array.isArray(response.data) ? response.data : response.data?.MediaContainer?.Device || [])
-        .filter((device: any) => device.provides?.includes('server'));
+        .filter((device: any) => device.provides && device.provides.includes('server'));
 
       if (fetchedServers.length === 0) {
         setError('No Plex servers found');
@@ -103,16 +104,22 @@ export default function ServerSelector() {
 
           {servers.length > 0 ? (
             <div className="server-menu-list">
-              {servers.map((server) => (
+              {servers.map((server) => {
+                const isOffline = !server.presence;
+                return (
                 <button
                   key={server.clientIdentifier}
                   className={`server-menu-item ${
                     server.clientIdentifier === selectedServerId ? 'selected' : ''
-                  }`}
+                  } ${isOffline ? 'offline' : ''}`}
                   onClick={() => {
-                    selectServer(server.clientIdentifier);
-                    setIsOpen(false);
+                    if (!isOffline) {
+                      selectServer(server.clientIdentifier);
+                      setIsOpen(false);
+                    }
                   }}
+                  disabled={isOffline}
+                  title={isOffline ? 'Server is offline' : `Select ${server.name}`}
                 >
                   <div className="server-item-main">
                     <span className="server-item-name">{server.name}</span>
@@ -121,9 +128,11 @@ export default function ServerSelector() {
                   <div className="server-item-meta">
                     <span className="server-item-version">v{server.productVersion}</span>
                     <span className="server-item-device">{server.device}</span>
+                    {isOffline && <span className="server-item-status">⊖ Offline</span>}
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           ) : !isLoading && !error ? (
             <div className="server-menu-empty">
