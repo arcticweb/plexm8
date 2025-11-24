@@ -40,7 +40,20 @@ export default function PlaylistDetail() {
     const fullPath = trackKey.startsWith('/library/metadata/') 
       ? trackKey 
       : `/library/metadata/${trackKey}`;
-    return `${serverUrl}/audio/:/transcode/universal/start.mp3?path=${encodeURIComponent(fullPath)}&mediaIndex=0&partIndex=0&protocol=http&X-Plex-Token=${token}`;
+    
+    // Build URL with all required parameters for Plex universal transcoder
+    const params = new URLSearchParams({
+      path: fullPath,
+      mediaIndex: '0',
+      partIndex: '0',
+      protocol: 'http',
+      audioCodec: 'mp3',
+      audioBitrate: '320',
+      maxAudioChannels: '2',
+      'X-Plex-Token': token,
+    });
+    
+    return `${serverUrl}/audio/:/transcode/universal/start.mp3?${params.toString()}`;
   };
 
   const handlePlayTrack = (trackIndex: number) => {
