@@ -94,14 +94,23 @@ export async function detectBackend(): Promise<BackendConfig> {
 
 /**
  * Get the appropriate proxy URL for playlists endpoint
+ * 
+ * @param serverUrl - Base Plex server URL (e.g., "https://...:32400")
+ * @param token - Plex authentication token
+ * @param clientId - Client identifier
+ * @param endpointPath - Optional endpoint path (e.g., "/playlists/123/items")
  */
 export async function getPlaylistsProxyUrl(
   serverUrl: string,
   token: string,
-  clientId: string
+  clientId: string,
+  endpointPath?: string
 ): Promise<string> {
   const backend = await detectBackend();
-  const encodedServerUrl = btoa(serverUrl);
+  
+  // Build full URL: serverUrl + endpointPath (if provided)
+  const fullUrl = endpointPath ? `${serverUrl}${endpointPath}` : serverUrl;
+  const encodedServerUrl = btoa(fullUrl);
 
   switch (backend.type) {
     case 'netlify':
@@ -116,7 +125,7 @@ export async function getPlaylistsProxyUrl(
       // Direct connection (no proxy)
       // This will likely fail due to CORS, but we'll try anyway
       console.warn('No proxy available, attempting direct connection (may fail due to CORS)');
-      return `${serverUrl}/playlists`;
+      return fullUrl;
 
     default:
       throw new Error('No backend available for playlist requests');

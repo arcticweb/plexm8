@@ -20,8 +20,13 @@ export interface BackendConfig {
 export declare function detectBackend(): Promise<BackendConfig>;
 /**
  * Get the appropriate proxy URL for playlists endpoint
+ *
+ * @param serverUrl - Base Plex server URL (e.g., "https://...:32400")
+ * @param token - Plex authentication token
+ * @param clientId - Client identifier
+ * @param endpointPath - Optional endpoint path (e.g., "/playlists/123/items")
  */
-export declare function getPlaylistsProxyUrl(serverUrl: string, token: string, clientId: string): Promise<string>;
+export declare function getPlaylistsProxyUrl(serverUrl: string, token: string, clientId: string, endpointPath?: string): Promise<string>;
 /**
  * Get the appropriate proxy URL for authentication endpoint
  */

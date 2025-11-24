@@ -112,15 +112,16 @@ export function usePlaylistTracks(playlistKey: string | null) {
         return;
       }
 
-      // Build full URL for playlist items endpoint
+      // Build endpoint path for playlist items
       // Plex API: GET /playlists/{playlistId}/items
-      const playlistUrl = `${serverUrl}${playlistKey}/items`;
+      const endpointPath = `${playlistKey}/items`;
 
-      // Route through proxy with endpoint parameter
+      // Route through proxy with base URL and endpoint path
       const proxyUrl = await getPlaylistsProxyUrl(
-        playlistUrl,
+        serverUrl,
         selectedServer.accessToken || token,
-        clientId
+        clientId,
+        endpointPath
       );
 
       const response = await axios.get(proxyUrl);

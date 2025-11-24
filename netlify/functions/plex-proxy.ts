@@ -35,11 +35,11 @@ function addCorsHeaders(statusCode: number, body: any) {
 /**
  * GET /api/plex/playlists
  * Fetch playlists from user's Plex server
- * Query params: serverUrl, token, clientId
+ * Query params: serverUrl, token, clientId, endpoint (optional)
  */
 async function handleGetPlaylists(event: HandlerEvent) {
   try {
-    const { serverUrl, token, clientId } = event.queryStringParameters || {};
+    const { serverUrl, token, clientId, endpoint } = event.queryStringParameters || {};
 
     if (!serverUrl || !token || !clientId) {
       return addCorsHeaders(400, { 
@@ -47,9 +47,12 @@ async function handleGetPlaylists(event: HandlerEvent) {
       });
     }
 
-    // Decode base64-encoded URL if needed
+    // Decode base64-encoded URL
     const decodedUrl = Buffer.from(serverUrl, 'base64').toString('utf-8');
-    const plexUrl = `${decodedUrl}/playlists`;
+    
+    // Use decoded URL as-is (may already contain endpoint path)
+    // or append /playlists if endpoint param explicitly requests it
+    const plexUrl = decodedUrl;
 
     const response = await axios.get(plexUrl, {
       headers: getPlexHeaders(token, clientId),
