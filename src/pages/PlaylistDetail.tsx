@@ -34,26 +34,14 @@ export default function PlaylistDetail() {
 
   const buildTrackUrl = (trackKey: string): string => {
     if (!serverUrl || !token) return '';
-    // Plex universal transcode endpoint for audio streaming
-    // This endpoint handles format conversion and works with HTML5 audio
-    // Ensure trackKey has the full path format: /library/metadata/{ratingKey}
-    const fullPath = trackKey.startsWith('/library/metadata/') 
-      ? trackKey 
-      : `/library/metadata/${trackKey}`;
+    // Use direct media download endpoint which is simpler and more reliable
+    // Format: /library/metadata/{ratingKey}/download
+    // This streams the original file without transcoding
+    const ratingKey = trackKey.startsWith('/library/metadata/') 
+      ? trackKey.replace('/library/metadata/', '') 
+      : trackKey;
     
-    // Build URL with all required parameters for Plex universal transcoder
-    const params = new URLSearchParams({
-      path: fullPath,
-      mediaIndex: '0',
-      partIndex: '0',
-      protocol: 'http',
-      audioCodec: 'mp3',
-      audioBitrate: '320',
-      maxAudioChannels: '2',
-      'X-Plex-Token': token,
-    });
-    
-    return `${serverUrl}/audio/:/transcode/universal/start.mp3?${params.toString()}`;
+    return `${serverUrl}/library/metadata/${ratingKey}/download?X-Plex-Token=${token}`;
   };
 
   const handlePlayTrack = (trackIndex: number) => {
