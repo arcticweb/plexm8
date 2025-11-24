@@ -10,16 +10,14 @@ A modern, installable web application for managing music playlists in your Plex 
 - **Offline Support**: Service worker enables basic offline functionality
 - **Responsive Design**: Optimized for desktop, tablet, and mobile devices
 - **Real-time Sync**: Instant synchronization with Plex Media Server
+- **Advanced Tools** (Optional): Local backend for ratings sync, recommendations, and smart playlists
 
 ## Quick Start
 
-### Prerequisites
-- Node.js 16+ 
-- npm or yarn
-- Access to a Plex Media Server with music library
+### Online Demo
+Just go to **[https://plexm8.netlify.app](https://plexm8.netlify.app)** and start using it!
 
-### Installation
-
+### Development Setup
 ```bash
 # Install dependencies
 npm install
@@ -30,6 +28,37 @@ npm run dev
 # Build for production
 npm run build
 ```
+
+### Local Backend (Optional)
+For advanced features like ratings sync and recommendations:
+
+```bash
+cd tools/python
+python setup.py
+```
+
+See [Local Backend Setup](docs/setup/local-backend-setup.md) for details.
+
+## Documentation
+
+Complete documentation is available in the [`docs/`](docs/) directory:
+
+### Getting Started
+- [Setup & Installation](docs/setup/) - Frontend and backend setup guides
+- [Getting Started](docs/getting-started.md) - Initial configuration
+
+### Backend
+- [Backend Documentation](docs/backend/) - Python backend overview
+- [API Reference](docs/backend/api-reference.md) - Complete API documentation
+- [Local Backend Setup](docs/setup/local-backend-setup.md) - Detailed installation guide
+
+### Architecture & Design
+- [Hybrid Architecture](docs/hybrid-architecture.md) - System design overview
+- [Architecture Decisions](docs/architecture.md) - Design decisions and rationale
+
+### For Developers
+- [Implementation Status](docs/backend/implementation-status.md) - Feature roadmap
+- [Project Structure](docs/structure.md) - Code organization
 
 ## Project Structure
 
@@ -45,7 +74,8 @@ src/
 │   ├── Player.tsx
 │   └── InstallPrompt.tsx
 ├── hooks/
-│   └── usePlexApi.ts   # Custom Plex API hook
+│   ├── usePlexApi.ts   # Custom Plex API hook
+│   └── useBackendDetection.ts # Local backend detection
 ├── pages/
 │   ├── Home.tsx
 │   └── Playlists.tsx
@@ -57,8 +87,26 @@ src/
 public/
 ├── index.html          # Main HTML file
 ├── manifest.json       # PWA manifest
-├── service-worker.js   # Service worker for offline support
-└── icons/             # PWA icons
+└── service-worker.js   # Service worker for offline support
+
+docs/
+├── setup/              # Setup guides
+│   ├── local-backend-setup.md
+│   └── README.md
+├── backend/            # Backend documentation
+│   ├── api-reference.md
+│   ├── implementation-status.md
+│   └── README.md
+└── ...                 # Additional documentation
+
+tools/python/           # Optional local backend
+├── app.py
+├── setup.py
+├── setup.ps1
+├── requirements.txt
+├── api/
+├── services/
+└── models/
 ```
 
 ## Documentation
