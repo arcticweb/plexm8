@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useServerStore } from '../utils/serverContext';
 import { useAuthStore, getOrCreateClientId } from '../utils/storage';
+import { useSettingsStore } from '../utils/settingsStore';
 import axios from 'axios';
 import { PLEX_CONFIG, buildPlexHeaders } from '../config/plex.config';
 
@@ -31,11 +32,13 @@ export default function ServerSelector() {
       setError(null);
 
       const clientId = getOrCreateClientId();
+      const timeout = useSettingsStore.getState().api.timeout;
 
       const response = await axios.get(
         `${PLEX_CONFIG.api.clients}/resources?includeHttps=1&includeRelay=1&includeIPv6=1`,
         {
           headers: buildPlexHeaders(token, clientId),
+          timeout, // Use timeout from settings store
         }
       );
 

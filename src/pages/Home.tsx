@@ -29,6 +29,9 @@ export default function Home() {
           <button onClick={handleNavigateToPlaylists} className="nav-button">
             Playlists
           </button>
+          <button onClick={() => navigate('/settings')} className="nav-button">
+            ⚙️ Settings
+          </button>
           <button onClick={handleLogout} className="nav-button logout">
             Logout
           </button>

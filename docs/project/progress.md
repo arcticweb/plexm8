@@ -86,6 +86,23 @@ gantt
 
 ## Phase 2: Core Features (IN PROGRESS)
 
+### Completed
+
+- ✅ **Application Settings System** (November 2025)
+  - ✅ Zustand settings store with localStorage persistence
+  - ✅ Settings page UI with tabs (API, Appearance, Performance, Advanced)
+  - ✅ API timeout configuration (adjustable 1-120 seconds)
+  - ✅ Retry attempts configuration (0-10 retries)
+  - ✅ Theme selection (Light, Dark, Auto)
+  - ✅ Pagination preferences (items per page)
+  - ✅ Cache expiry configuration
+  - ✅ Debug mode toggle
+  - ✅ Import/Export settings functionality
+  - ✅ Reset to defaults option
+  - ✅ Integration with API client (dynamic timeout)
+  - ✅ Navigation link in Home page
+  - ✅ Comprehensive documentation
+
 ### Tasks
 
 - [ ] **Authentication Flow** (WIP)
@@ -121,6 +138,7 @@ gantt
   - [ ] Manual testing on Android
   - [ ] Authentication flow testing
   - [ ] Playlist operations testing
+  - [ ] Settings persistence testing
 
 ### Estimated Timeline
 

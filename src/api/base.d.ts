@@ -11,6 +11,7 @@ export interface ApiClientConfig {
     baseURL: string;
     token?: string;
     clientId?: string;
+    timeout?: number;
 }
 /**
  * Base API client with common methods

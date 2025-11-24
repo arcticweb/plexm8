@@ -73,7 +73,12 @@ src/
 │
 ├── pages/                      # Page Components
 │   ├── Home.tsx                # Main dashboard
-│   └── Playlists.tsx           # Playlist list
+│   ├── Playlists.tsx           # Playlist list
+│   └── Settings.tsx            # Application settings
+│       • API configuration (timeout, retries)
+│       • Appearance (theme, pagination)
+│       • Performance (caching, preloading)
+│       • Import/Export settings
 │
 ├── hooks/
 │   └── usePlexApi.ts           # Custom API hook
@@ -82,16 +87,29 @@ src/
 │       • useResources()
 │
 ├── utils/
-│   └── storage.ts              # State Management
-│       • useAuthStore (Zustand)
-│       • usePlaylistStore
-│       • getOrCreateClientId()
+│   ├── storage.ts              # State Management
+│   │   • useAuthStore (Zustand)
+│   │   • usePlaylistStore
+│   │   • getOrCreateClientId()
+│   │
+│   ├── settingsStore.ts        # Settings State Management
+│   │   • useSettingsStore (Zustand)
+│   │   • API timeout configuration
+│   │   • UI preferences (theme, pagination)
+│   │   • Performance settings (caching)
+│   │   • Import/Export functionality
+│   │
+│   └── serverContext.ts        # Server Selection State
+│       • useServerStore (Zustand)
+│       • Multi-server support
+│       • Server persistence
 │
 └── styles/
     └── app.css                 # Global styles
         • CSS variables
         • Responsive grid
         • Dark theme
+        • Settings page styling
 ```
 
 ### `public/` - Static Assets

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore, getOrCreateClientId } from '../utils/storage';
 import { useServerStore } from '../utils/serverContext';
+import { selectBestConnection } from '../utils/connectionSelector';
+import { getPlaylistsProxyUrl } from '../utils/backendDetector';
 import axios from 'axios';
 
 export interface Playlist {
@@ -62,35 +64,24 @@ export function usePlaylists() {
 
       const clientId = getOrCreateClientId();
 
-      // Get connection URL (prefer local)
-      let serverUrl = selectedServer.connections?.[0]?.uri;
-      if (selectedServer.connections && Array.isArray(selectedServer.connections)) {
-        const localConnection = selectedServer.connections.find((c) => c.local === true);
-        if (localConnection) {
-          serverUrl = localConnection.uri;
-        } else {
-          serverUrl = selectedServer.connections[0]?.uri;
-        }
-      }
+      // Use smart connection selector to pick best URL
+      // (local IP for dev, public IP for production)
+      const serverUrl = selectBestConnection(selectedServer);
 
       if (!serverUrl) {
         setError('No valid connection found for selected server');
         return;
       }
 
-      // Route through Netlify Function proxy to bypass CORS restrictions
-      // Encode serverUrl as base64 for safe query parameter passing
-      // Use btoa() for browser compatibility (instead of Buffer.from() which is Node.js only)
-      const encodedServerUrl = btoa(serverUrl);
+      // Automatically detect and use the best available backend
+      // (Netlify Functions in production, Python backend in local dev, or direct)
+      const proxyUrl = await getPlaylistsProxyUrl(
+        serverUrl,
+        selectedServer.accessToken || token,
+        clientId
+      );
 
-      const proxyResponse = await axios.get('/.netlify/functions/plex-proxy', {
-        params: {
-          endpoint: 'playlists',
-          serverUrl: encodedServerUrl,
-          token: selectedServer.accessToken || token,
-          clientId,
-        },
-      });
+      const proxyResponse = await axios.get(proxyUrl);
 
       const fetchedPlaylists = (proxyResponse.data as PlexPlaylistResponse)
         .MediaContainer?.Metadata?.map((p) => ({

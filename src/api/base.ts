@@ -5,6 +5,7 @@
 
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { PlexError } from './types';
+import { useSettingsStore } from '../utils/settingsStore';
 
 /**
  * Configuration for API client
@@ -13,6 +14,7 @@ export interface ApiClientConfig {
   baseURL: string;
   token?: string;
   clientId?: string;
+  timeout?: number; // Optional override, falls back to settings store
 }
 
 /**
@@ -24,8 +26,12 @@ export class PlexApiClient {
   protected clientId: string | null = null;
 
   constructor(config: ApiClientConfig) {
+    // Get timeout from config or settings store
+    const timeout = config.timeout || useSettingsStore.getState().api.timeout;
+
     this.client = axios.create({
       baseURL: config.baseURL,
+      timeout, // Use dynamic timeout from settings
       headers: {
         'Accept': 'application/json',
         'X-Plex-Product': 'PlexM8',
@@ -45,6 +51,8 @@ export class PlexApiClient {
       if (this.token) {
         config.headers['X-Plex-Token'] = this.token;
       }
+      // Update timeout from settings store on each request
+      config.timeout = useSettingsStore.getState().api.timeout;
       return config;
     });
   }

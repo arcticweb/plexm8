@@ -151,14 +151,54 @@ npm run lint
 npm run format
 ```
 
+## Application Settings
+
+PlexM8 includes a comprehensive settings system accessible from the Settings page (⚙️ icon in navigation).
+
+### Configuration Options
+
+#### API Settings
+- **Request Timeout**: Adjust timeout for API calls (useful for high-latency connections)
+  - Default: 30 seconds (30000ms)
+  - Range: 1-120 seconds
+- **Retry Attempts**: Number of times to retry failed requests (0-10)
+- **Custom Endpoints**: Override default API endpoints for testing
+
+#### Appearance
+- **Theme**: Light, Dark, or Auto (system preference)
+- **Items Per Page**: Pagination size for lists (10-200)
+- **Auto-play**: Automatically play next track
+- **Debug Mode**: Show additional console logging
+
+#### Performance
+- **Cache Expiry**: How long to cache API responses (1-60 minutes)
+- **Preload Thumbnails**: Load artwork in advance
+- **Background Sync**: Experimental offline support
+
+#### Advanced
+- **Export Settings**: Download settings as JSON backup
+- **Import Settings**: Restore settings from backup file
+- **Reset to Defaults**: Restore original settings
+
+### Accessing Settings
+
+1. Log into PlexM8
+2. Click the ⚙️ Settings button in navigation
+3. Navigate between tabs (API, Appearance, Performance, Advanced)
+4. Changes save automatically to localStorage
+
+### Settings Storage
+
+Settings persist in browser localStorage under key `plexm8-settings`. They survive page refreshes but are device-specific.
+
 ## Next Steps
 
 1. ✅ Install dependencies
 2. ✅ Start dev server
 3. ✅ Explore codebase
-4. Read [Architecture](./architecture.md) guide
-5. Review [Plex API](./api/plex-integration.md) guide
-6. Begin Phase 2 development
+4. ✅ Configure settings for your network
+5. Read [Architecture](./architecture.md) guide
+6. Review [Plex API](./api/plex-integration.md) guide
 
 ## Documentation
 
