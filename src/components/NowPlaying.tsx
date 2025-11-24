@@ -52,35 +52,30 @@ export default function NowPlaying() {
   const currentTrack = getCurrentTrack();
   
   // Helper function to build track URL on-demand
-  const buildTrackUrl = (track: any, forceTranscode: boolean = false): string => {
-    if (!serverUrl || !token) return '';
+  const buildTrackUrl = (track: any): { url: string; requiresHeaders: boolean } => {
+    if (!serverUrl || !token) return { url: '', requiresHeaders: false };
     
-    // If URL already exists and we're not forcing transcode, use it
-    if (!forceTranscode && track.url && track.url.trim() !== '') {
-      return track.url;
+    // If URL already exists in track, use it
+    if (track.url && track.url.trim() !== '') {
+      return { url: track.url, requiresHeaders: false };
     }
     
-    // Check if we should use transcode for this format
+    // Check format - WMA/ASF/WMV need transcoding
     const mediaPart = track.Media?.[0]?.Part?.[0];
     const container = mediaPart?.container?.toLowerCase();
     const fileExt = mediaPart?.key?.split('.').pop()?.toLowerCase();
     
-    // Formats that may have CORS or browser support issues
-    const problematicFormats = ['wma', 'wmv', 'asf'];
-    const shouldTranscode = forceTranscode || 
-                           problematicFormats.includes(container || '') ||
-                           problematicFormats.includes(fileExt || '');
+    const problematicFormats = ['wma', 'wmv', 'asf', 'wv'];
+    const needsTranscode = problematicFormats.includes(container || '') ||
+                          problematicFormats.includes(fileExt || '');
     
-    if (shouldTranscode) {
-      console.log(`[NowPlaying] Using transcode for ${track.title || 'Unknown'} (${fileExt || container || 'unknown format'})`);
-    }
-    
-    if (shouldTranscode || !mediaPart?.key) {
-      // Use Plex universal transcode endpoint
+    if (needsTranscode) {
+      console.log(`[NowPlaying] Transcoding ${track.title || 'Unknown'} (${fileExt || container})`);
+      
       const ratingKey = track.key?.replace?.('/library/metadata/', '') || track.ratingKey || '';
       if (!ratingKey) {
-        console.error('[NowPlaying] Cannot build URL - no ratingKey:', track.title);
-        return '';
+        console.error('[NowPlaying] Cannot build transcode URL - no ratingKey');
+        return { url: '', requiresHeaders: false };
       }
       
       const params = new URLSearchParams({
@@ -94,12 +89,21 @@ export default function NowPlaying() {
         musicBitrate: '320',
       });
       
-      console.log(`[NowPlaying] Transcode URL: ${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`);
-      return `${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`;
+      return {
+        url: `${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`,
+        requiresHeaders: true,
+      };
     }
     
-    // Direct file streaming
-    return `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`;
+    // Direct streaming for supported formats
+    if (mediaPart?.key) {
+      return {
+        url: `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`,
+        requiresHeaders: false,
+      };
+    }
+    
+    return { url: '', requiresHeaders: false };
   };
   
   // Build full artwork URL from relative path
@@ -119,10 +123,15 @@ export default function NowPlaying() {
       if (hasNext()) {
         const nextTrack = playNext();
         if (nextTrack) {
-          const url = buildTrackUrl(nextTrack);
-          if (url) {
-            controls.loadTrack(url);
+          const trackInfo = buildTrackUrl(nextTrack);
+          if (trackInfo.url) {
+            const clientId = localStorage.getItem('clientId') || 'plexm8';
+            controls.loadTrack(trackInfo.url, trackInfo.requiresHeaders, clientId);
             controls.play();
+          } else {
+            // URL is empty (unsupported format) - skip to next track
+            console.log('[NowPlaying] Skipping unsupported track, moving to next');
+            // Recursively skip (will be handled by next render cycle)
           }
         }
       }
@@ -146,27 +155,20 @@ export default function NowPlaying() {
       
       console.error('Playback error:', playerState.error);
       
-      // First try: Retry current track with transcode
-      if (!retriedWithTranscode && currentTrack) {
-        console.log('[NowPlaying] Retrying with transcode for:', currentTrack.title);
-        setRetriedWithTranscode(true);
-        const url = buildTrackUrl(currentTrack, true); // Force transcode
-        if (url) {
-          controls.loadTrack(url);
-          controls.play();
-          return;
-        }
-      }
-      
-      // Second try failed or no current track - skip to next
+      // Skip to next track on error
+      console.log('[NowPlaying] Error occurred, skipping to next track');
       setRetriedWithTranscode(false);
       if (hasNext()) {
         const nextTrack = playNext();
         if (nextTrack) {
-          const url = buildTrackUrl(nextTrack);
-          if (url) {
-            controls.loadTrack(url);
+          const trackInfo = buildTrackUrl(nextTrack);
+          if (trackInfo.url) {
+            const clientId = localStorage.getItem('clientId') || 'plexm8';
+            controls.loadTrack(trackInfo.url, trackInfo.requiresHeaders, clientId);
             controls.play();
+          } else {
+            // Next track also has no URL - will be handled by next error cycle
+            console.log('[NowPlaying] Next track also has no URL, will skip again');
           }
         }
       }
@@ -189,9 +191,10 @@ export default function NowPlaying() {
     controls.pause();
     const nextTrack = playNext();
     if (nextTrack) {
-      const url = buildTrackUrl(nextTrack);
-      if (url) {
-        controls.loadTrack(url);
+      const trackInfo = buildTrackUrl(nextTrack);
+      if (trackInfo.url) {
+        const clientId = localStorage.getItem('clientId') || 'plexm8';
+        controls.loadTrack(trackInfo.url, trackInfo.requiresHeaders, clientId);
         controls.play();
       }
     }
@@ -207,9 +210,10 @@ export default function NowPlaying() {
       controls.pause();
       const prevTrack = playPrevious();
       if (prevTrack) {
-        const url = buildTrackUrl(prevTrack);
-        if (url) {
-          controls.loadTrack(url);
+        const trackInfo = buildTrackUrl(prevTrack);
+        if (trackInfo.url) {
+          const clientId = localStorage.getItem('clientId') || 'plexm8';
+          controls.loadTrack(trackInfo.url, trackInfo.requiresHeaders, clientId);
           controls.play();
         }
       }

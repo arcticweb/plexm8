@@ -23,7 +23,7 @@ export interface AudioPlayerControls {
     seek: (time: number) => void;
     setVolume: (volume: number) => void;
     toggleMute: () => void;
-    loadTrack: (url: string) => Promise<void>;
+    loadTrack: (url: string, requiresHeaders?: boolean, clientId?: string) => Promise<void>;
     stop: () => void;
 }
 /**

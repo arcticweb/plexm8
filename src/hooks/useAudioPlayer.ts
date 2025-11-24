@@ -35,7 +35,7 @@ export interface AudioPlayerControls {
   seek: (time: number) => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
-  loadTrack: (url: string) => Promise<void>;
+  loadTrack: (url: string, requiresHeaders?: boolean, clientId?: string) => Promise<void>;
   stop: () => void;
 }
 
@@ -211,21 +211,64 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
     audioRef.current.muted = !audioRef.current.muted;
   }, []);
 
-  const loadTrack = useCallback(async (url: string) => {
+  const loadTrack = useCallback(async (url: string, requiresHeaders: boolean = false, clientId?: string) => {
     if (!audioRef.current) return;
     
     // Stop current playback
     audioRef.current.pause();
     audioRef.current.currentTime = 0;
     
-    // Load new track
-    audioRef.current.src = url;
-    setState((prev) => ({ 
-      ...prev, 
-      currentTrackUrl: url,
-      currentTime: 0,
-      error: null,
-    }));
+    // If URL requires custom headers (like Plex transcode), fetch it with headers and create Blob URL
+    if (requiresHeaders && clientId) {
+      try {
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
+        
+        const response = await fetch(url, {
+          headers: {
+            'X-Plex-Client-Identifier': clientId,
+            'X-Plex-Product': 'PlexM8',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Clean up previous blob URL if exists
+        if (audioRef.current.src.startsWith('blob:')) {
+          URL.revokeObjectURL(audioRef.current.src);
+        }
+        
+        audioRef.current.src = blobUrl;
+        setState((prev) => ({ 
+          ...prev, 
+          currentTrackUrl: blobUrl,
+          currentTime: 0,
+          isLoading: false,
+          error: null,
+        }));
+      } catch (error) {
+        console.error('Fetch track with headers failed:', error);
+        setState((prev) => ({ 
+          ...prev, 
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Failed to fetch track',
+        }));
+        return;
+      }
+    } else {
+      // Standard loading for direct URLs
+      audioRef.current.src = url;
+      setState((prev) => ({ 
+        ...prev, 
+        currentTrackUrl: url,
+        currentTime: 0,
+        error: null,
+      }));
+    }
     
     // Load metadata
     try {

@@ -80,46 +80,54 @@ export default function PlaylistDetail() {
     setTracksPerPage(totalTracks); // Show all tracks
   };
 
-  const buildTrackUrl = (track: Track): string => {
-    if (!serverUrl || !token) return '';
+  const buildTrackUrl = (track: Track): { url: string; requiresHeaders: boolean } => {
+    if (!serverUrl || !token) return { url: '', requiresHeaders: false };
     
     // Check format to determine if transcoding is needed
     const mediaPart = track.Media?.[0]?.Part?.[0];
     const container = mediaPart?.container?.toLowerCase();
     const fileExt = mediaPart?.key?.split('.').pop()?.toLowerCase();
     
-    // Formats that have CORS or browser support issues - must transcode
+    // Formats that need transcoding via Plex
     const problematicFormats = ['wma', 'wmv', 'asf', 'wv'];
     const needsTranscode = problematicFormats.includes(container || '') ||
                            problematicFormats.includes(fileExt || '');
     
     if (needsTranscode) {
-      console.log(`[PlaylistDetail] Transcoding ${track.title} (format: ${fileExt || container || 'unknown'})`);
+      console.log(`[PlaylistDetail] Transcoding ${track.title} (${fileExt || container}) via fetch with headers`);
+      
+      // Build transcode URL
+      const ratingKey = track.key.startsWith('/library/metadata/') 
+        ? track.key.replace('/library/metadata/', '') 
+        : track.key;
+      
+      const params = new URLSearchParams({
+        'X-Plex-Token': token,
+        path: `/library/metadata/${ratingKey}`,
+        mediaIndex: '0',
+        partIndex: '0',
+        protocol: 'http',
+        directPlay: '0',
+        directStream: '0',
+        musicBitrate: '320',
+      });
+      
+      return {
+        url: `${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`,
+        requiresHeaders: true, // Needs fetch with X-Plex-Client-Identifier header
+      };
     }
     
-    // If format is supported and has direct media part, use direct streaming
-    if (!needsTranscode && mediaPart?.key) {
-      return `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`;
+    // Direct streaming for supported formats
+    if (mediaPart?.key) {
+      return {
+        url: `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`,
+        requiresHeaders: false,
+      };
     }
     
-    // Use Plex universal transcode endpoint for problematic formats or missing media parts
-    const ratingKey = track.key.startsWith('/library/metadata/') 
-      ? track.key.replace('/library/metadata/', '') 
-      : track.key;
-    
-    const params = new URLSearchParams({
-      'X-Plex-Token': token,
-      path: `/library/metadata/${ratingKey}`,
-      mediaIndex: '0',
-      partIndex: '0',
-      protocol: 'http',
-      directPlay: '0',
-      directStream: '0',
-      musicBitrate: '320',
-    });
-    
-    console.log(`[PlaylistDetail] Transcode URL: ${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`);
-    return `${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`;
+    // No media part available
+    return { url: '', requiresHeaders: false };
   };
 
   const handlePlayTrack = (trackIndex: number) => {
@@ -145,10 +153,18 @@ export default function PlaylistDetail() {
     
     // Build URL only for the track we're about to play
     const selectedTrack = queueTracks[trackIndex];
-    selectedTrack.url = buildTrackUrl(filteredTracks[trackIndex]);
+    const trackInfo = buildTrackUrl(filteredTracks[trackIndex]);
+    selectedTrack.url = trackInfo.url;
     
-    controls.loadTrack(selectedTrack.url);
-    controls.play();
+    if (trackInfo.url) {
+      const clientId = localStorage.getItem('clientId') || 'plexm8';
+      controls.loadTrack(trackInfo.url, trackInfo.requiresHeaders, clientId);
+      controls.play();
+    } else {
+      // No valid URL - likely missing media part
+      console.warn('[PlaylistDetail] Cannot build URL for:', filteredTracks[trackIndex].title);
+      alert(`Cannot play this track: ${filteredTracks[trackIndex].title}\n\nMedia file not found.`);
+    }
   };
 
   const handlePlayAll = () => {
