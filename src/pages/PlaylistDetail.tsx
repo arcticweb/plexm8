@@ -34,9 +34,10 @@ export default function PlaylistDetail() {
 
   const buildTrackUrl = (trackKey: string): string => {
     if (!serverUrl || !token) return '';
-    // Remove leading slash from trackKey if present
-    const cleanKey = trackKey.startsWith('/') ? trackKey.substring(1) : trackKey;
-    return `${serverUrl}/library/metadata/${cleanKey}/file?X-Plex-Token=${token}`;
+    // Plex universal transcode endpoint for audio streaming
+    // This endpoint handles format conversion and works with HTML5 audio
+    // trackKey format: /library/metadata/{ratingKey}
+    return `${serverUrl}/audio/:/transcode/universal/start.mp3?path=${encodeURIComponent(trackKey)}&mediaIndex=0&partIndex=0&protocol=http&X-Plex-Token=${token}`;
   };
 
   const handlePlayTrack = (trackIndex: number) => {
