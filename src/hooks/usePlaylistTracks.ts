@@ -95,9 +95,10 @@ interface PlexPlaylistDetailResponse {
  * Hook to fetch tracks from a specific playlist
  * 
  * @param playlistKey - The Plex key for the playlist (e.g., "/playlists/12345")
+ * @param trackCount - Optional track count to optimize fetching (skip proxy for large playlists)
  * @returns Playlist details with tracks, loading state, and error
  */
-export function usePlaylistTracks(playlistKey: string | null) {
+export function usePlaylistTracks(playlistKey: string | null, trackCount?: number) {
   const { token } = useAuthStore();
   const { getSelectedServer } = useServerStore();
   const [playlistDetail, setPlaylistDetail] = useState<PlaylistDetail | null>(null);
@@ -136,30 +137,51 @@ export function usePlaylistTracks(playlistKey: string | null) {
       const endpointPath = playlistKey;
 
       let data: PlexPlaylistDetailResponse;
+      
+      // Smart decision: Skip proxy for large playlists (>500 tracks)
+      // Netlify Functions have 6MB response limit, ~500 tracks ≈ 3-4MB
+      // This avoids waiting for proxy timeout/error on large playlists
+      const PROXY_TRACK_LIMIT = 500;
+      const shouldSkipProxy = trackCount !== undefined && trackCount > PROXY_TRACK_LIMIT;
 
-      try {
-        // Try proxy first (for CORS)
-        const proxyUrl = await getPlaylistsProxyUrl(
-          serverUrl,
-          selectedServer.accessToken || token,
-          clientId,
-          endpointPath
-        );
-
-        const response = await axios.get(proxyUrl);
-        data = response.data as PlexPlaylistDetailResponse;
-      } catch (proxyError: any) {
-        // If proxy fails (e.g., 6MB limit), try direct Plex API
-        // This works because we have valid authentication
-        console.warn('Proxy failed, attempting direct Plex connection:', proxyError.message);
+      if (shouldSkipProxy) {
+        console.log(`[Playlist] Large playlist detected (${trackCount} tracks), skipping proxy and using direct Plex API`);
         
+        // Go directly to Plex, skip the proxy attempt entirely
         const directUrl = `${serverUrl}${endpointPath}?X-Plex-Token=${selectedServer.accessToken || token}`;
+        const startTime = Date.now();
         const directResponse = await axios.get(directUrl, {
           headers: {
             'Accept': 'application/json',
           },
         });
+        console.log(`[Playlist] Loaded ${trackCount} tracks in ${Date.now() - startTime}ms`);
         data = directResponse.data as PlexPlaylistDetailResponse;
+      } else {
+        // Normal flow: Try proxy first for better CORS handling
+        try {
+          const proxyUrl = await getPlaylistsProxyUrl(
+            serverUrl,
+            selectedServer.accessToken || token,
+            clientId,
+            endpointPath
+          );
+
+          const response = await axios.get(proxyUrl);
+          data = response.data as PlexPlaylistDetailResponse;
+        } catch (proxyError: any) {
+          // If proxy fails (e.g., 6MB limit), try direct Plex API
+          // This works because we have valid authentication
+          console.warn('[Playlist] Proxy failed, attempting direct Plex connection:', proxyError.message);
+          
+          const directUrl = `${serverUrl}${endpointPath}?X-Plex-Token=${selectedServer.accessToken || token}`;
+          const directResponse = await axios.get(directUrl, {
+            headers: {
+              'Accept': 'application/json',
+            },
+          });
+          data = directResponse.data as PlexPlaylistDetailResponse;
+        }
       }
 
       if (!data.MediaContainer) {

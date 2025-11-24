@@ -15,11 +15,14 @@ export default function Playlists() {
   const { playlists, loading, error, refetch } = usePlaylists();
   const [selectedPlaylist, setSelectedPlaylist] = useState<string | null>(null);
 
-  const handlePlaylistClick = (playlistKey: string) => {
+  const handlePlaylistClick = (playlistKey: string, trackCount?: number) => {
     setSelectedPlaylist(playlistKey);
     // Encode playlist key for URL (handles special characters like /)
     const encodedKey = encodeURIComponent(playlistKey);
-    navigate(`/playlists/${encodedKey}`);
+    // Pass track count via location state for optimization
+    navigate(`/playlists/${encodedKey}`, { 
+      state: { trackCount } 
+    });
   };
 
   const getThumbnailUrl = (thumb?: string) => {
@@ -77,7 +80,7 @@ export default function Playlists() {
                   <div
                     key={playlist.key}
                     className={`playlist-item ${isSelected ? 'selected' : ''}`}
-                    onClick={() => handlePlaylistClick(playlist.key)}
+                    onClick={() => handlePlaylistClick(playlist.key, playlist.leafCount)}
                   >
                     <div className="playlist-thumbnail">
                       {thumbnailUrl ? (

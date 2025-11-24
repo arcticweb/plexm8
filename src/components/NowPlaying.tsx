@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useQueueStore } from '../utils/queueStore';
 import { formatTime } from '../hooks/useAudioPlayer';
+import { useAuthStore } from '../utils/storage';
+import { useServerStore } from '../utils/serverContext';
+import { selectBestConnection } from '../utils/connectionSelector';
+import { getArtworkUrl } from '../hooks/usePlaylistTracks';
 
 /**
  * Now Playing Component
@@ -18,6 +22,11 @@ import { formatTime } from '../hooks/useAudioPlayer';
 
 export default function NowPlaying() {
   const [playerState, controls] = useAudioPlayer();
+  const { token } = useAuthStore();
+  const { getSelectedServer } = useServerStore();
+  const selectedServer = getSelectedServer();
+  const serverUrl = selectedServer ? selectBestConnection(selectedServer) : null;
+  
   // Persist minimize state in localStorage
   const [isMinimized, setIsMinimized] = useState(() => {
     const saved = localStorage.getItem('plexm8-player-minimized');
@@ -41,6 +50,11 @@ export default function NowPlaying() {
   } = useQueueStore();
 
   const currentTrack = getCurrentTrack();
+  
+  // Build full artwork URL from relative path
+  const artworkUrl = currentTrack?.thumb && serverUrl && token
+    ? getArtworkUrl(serverUrl, currentTrack.thumb, token)
+    : currentTrack?.thumb; // Fallback to stored URL if already full
 
   // Auto-play next track when current track ends
   useEffect(() => {
@@ -146,9 +160,9 @@ export default function NowPlaying() {
       <div className="now-playing-container">
         {/* Track Info */}
         <div className="now-playing-info">
-          {currentTrack.thumb && (
+          {artworkUrl && (
             <img
-              src={currentTrack.thumb}
+              src={artworkUrl}
               alt={currentTrack.title}
               className="now-playing-artwork"
             />

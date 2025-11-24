@@ -9,6 +9,13 @@ export interface QueueTrack {
     thumb?: string;
     duration?: number;
     url: string;
+    Media?: Array<{
+        Part?: Array<{
+            key?: string;
+            file?: string;
+        }>;
+    }>;
+    ratingKey?: string;
 }
 /**
  * Repeat modes for playback
@@ -68,6 +75,15 @@ export declare const useQueueStore: import("zustand").UseBoundStore<Omit<import(
             currentIndex: number;
             shuffle: boolean;
             repeat: RepeatMode;
+            _originalQueueSize: number;
+            _originalCurrentIndex: number;
+        } | {
+            queue: QueueTrack[];
+            currentIndex: number;
+            shuffle: boolean;
+            repeat: RepeatMode;
+            _originalQueueSize?: undefined;
+            _originalCurrentIndex?: undefined;
         }>>) => void;
         clearStorage: () => void;
         rehydrate: () => Promise<void> | void;
@@ -79,6 +95,15 @@ export declare const useQueueStore: import("zustand").UseBoundStore<Omit<import(
             currentIndex: number;
             shuffle: boolean;
             repeat: RepeatMode;
+            _originalQueueSize: number;
+            _originalCurrentIndex: number;
+        } | {
+            queue: QueueTrack[];
+            currentIndex: number;
+            shuffle: boolean;
+            repeat: RepeatMode;
+            _originalQueueSize?: undefined;
+            _originalCurrentIndex?: undefined;
         }>>;
     };
 }>;

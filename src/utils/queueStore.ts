@@ -12,6 +12,14 @@ export interface QueueTrack {
   thumb?: string;
   duration?: number;
   url: string; // Full playback URL with token
+  // For lazy URL building (large playlists)
+  Media?: Array<{
+    Part?: Array<{
+      key?: string;
+      file?: string;
+    }>;  
+  }>;  
+  ratingKey?: string;
 }
 
 /**
@@ -355,14 +363,56 @@ export const useQueueStore = create<QueueState>()(
     }),
     {
       name: 'plexm8-queue',
-      version: 1,
-      // Don't persist history (can grow large)
-      partialize: (state) => ({
-        queue: state.queue,
-        currentIndex: state.currentIndex,
-        shuffle: state.shuffle,
-        repeat: state.repeat,
-      }),
+      version: 2,
+      // Selective persistence to avoid localStorage quota exceeded errors
+      partialize: (state) => {
+        // For large queues (>100 tracks), only persist minimal data
+        // to avoid hitting localStorage quota (5-10MB limit)
+        const MAX_PERSISTED_QUEUE_SIZE = 100;
+        
+        if (state.queue.length > MAX_PERSISTED_QUEUE_SIZE) {
+          console.log(`[Queue] Large queue detected (${state.queue.length} tracks), persisting only current track and playback state`);
+          
+          // Only persist current track and a small window around it
+          const startIdx = Math.max(0, state.currentIndex - 10);
+          const endIdx = Math.min(state.queue.length, state.currentIndex + 11);
+          const windowedQueue = state.queue.slice(startIdx, endIdx);
+          
+          return {
+            queue: windowedQueue,
+            currentIndex: state.currentIndex - startIdx, // Adjust index to windowed queue
+            shuffle: state.shuffle,
+            repeat: state.repeat,
+            // Store metadata about the full queue for restoration
+            _originalQueueSize: state.queue.length,
+            _originalCurrentIndex: state.currentIndex,
+          };
+        }
+        
+        // For normal-sized queues, persist everything
+        return {
+          queue: state.queue,
+          currentIndex: state.currentIndex,
+          shuffle: state.shuffle,
+          repeat: state.repeat,
+        };
+      },
+      // Handle localStorage quota errors gracefully
+      onRehydrateStorage: () => {
+        return (state, error) => {
+          if (error) {
+            console.error('[Queue] Error rehydrating from localStorage:', error);
+            // Clear corrupted data
+            try {
+              localStorage.removeItem('plexm8-queue');
+            } catch (e) {
+              console.error('[Queue] Failed to clear corrupted queue data:', e);
+            }
+          } else if (state && (state as any)._originalQueueSize) {
+            console.log(`[Queue] Restored windowed queue from large playlist (${(state as any)._originalQueueSize} total tracks)`);
+          }
+        };
+      },
     }
   )
 );

@@ -22,10 +22,14 @@ export default function PlaylistDetail() {
   const { token } = useAuthStore();
   const { getSelectedServer } = useServerStore();
   
+  // Get location state to access track count hint (passed from Playlists page)
+  const locationState = (window.history.state as any)?.usr;
+  const trackCountHint = locationState?.trackCount;
+  
   // Decode playlist key from URL (base64 encoded to handle special chars)
   const playlistKey = playlistId ? decodeURIComponent(playlistId) : null;
   
-  const { playlistDetail, loading, error } = usePlaylistTracks(playlistKey);
+  const { playlistDetail, loading, error } = usePlaylistTracks(playlistKey, trackCountHint);
   const [, controls] = useAudioPlayer();
   const { setQueue, getCurrentTrack } = useQueueStore();
 
@@ -117,16 +121,25 @@ export default function PlaylistDetail() {
   const handlePlayTrack = (trackIndex: number) => {
     if (!serverUrl || !token) return;
 
-    // Build queue from filtered tracks (respects search)
-    const queueTracks: QueueTrack[] = filteredTracks.map((track: Track) => ({
-      key: track.key,
-      title: track.title,
-      artist: track.artist,
-      album: track.album,
-      thumb: track.thumb ? getArtworkUrl(serverUrl, track.thumb, token) : undefined,
-      duration: track.duration,
-      url: buildTrackUrl(track),
-    }));
+    // For large playlists, store minimal data and build URLs on-demand
+    // This prevents localStorage quota errors
+    const queueTracks: QueueTrack[] = filteredTracks.map((track: Track) => {
+      const url = buildTrackUrl(track);
+      
+      return {
+        key: track.key,
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        // Store relative thumb path, not full URL (saves space)
+        thumb: track.thumb,
+        duration: track.duration,
+        url: url,
+        // Store Media parts for potential URL rebuilding
+        Media: track.Media,
+        ratingKey: track.key.replace('/library/metadata/', ''),
+      };
+    });
 
     // Set queue starting at clicked track
     setQueue(queueTracks, trackIndex);

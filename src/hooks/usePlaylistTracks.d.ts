@@ -43,9 +43,10 @@ export interface PlaylistDetail {
  * Hook to fetch tracks from a specific playlist
  *
  * @param playlistKey - The Plex key for the playlist (e.g., "/playlists/12345")
+ * @param trackCount - Optional track count to optimize fetching (skip proxy for large playlists)
  * @returns Playlist details with tracks, loading state, and error
  */
-export declare function usePlaylistTracks(playlistKey: string | null): {
+export declare function usePlaylistTracks(playlistKey: string | null, trackCount?: number): {
     playlistDetail: PlaylistDetail | null;
     loading: boolean;
     error: string | null;
