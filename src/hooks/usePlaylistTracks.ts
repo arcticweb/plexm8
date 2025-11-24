@@ -94,6 +94,10 @@ interface PlexPlaylistDetailResponse {
 /**
  * Hook to fetch tracks from a specific playlist
  * 
+ * Uses API-level pagination for large playlists:
+ * - Initial load: First 100 tracks for instant UI
+ * - Background: Remaining tracks loaded in batches
+ * 
  * @param playlistKey - The Plex key for the playlist (e.g., "/playlists/12345")
  * @param trackCount - Optional track count to optimize fetching (skip proxy for large playlists)
  * @returns Playlist details with tracks, loading state, and error
@@ -103,6 +107,7 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
   const { getSelectedServer } = useServerStore();
   const [playlistDetail, setPlaylistDetail] = useState<PlaylistDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPlaylistTracks = async () => {
@@ -122,8 +127,6 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
       setError(null);
 
       const clientId = getOrCreateClientId();
-
-      // Get best connection URL
       const serverUrl = selectBestConnection(selectedServer);
 
       if (!serverUrl) {
@@ -131,102 +134,172 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
         return;
       }
 
-      // Build endpoint path for playlist items
-      // Plex API: GET /playlists/{playlistId}/items
-      // Note: playlistKey already includes the full path (e.g., "/playlists/42850/items")
       const endpointPath = playlistKey;
+      const authToken = selectedServer.accessToken || token;
 
-      let data: PlexPlaylistDetailResponse;
+      // Batch size for API pagination
+      const BATCH_SIZE = 500;
+      const LARGE_PLAYLIST_THRESHOLD = 1000;
       
-      // Smart decision: Skip proxy for large playlists (>500 tracks)
-      // Netlify Functions have 6MB response limit, ~500 tracks ≈ 3-4MB
-      // This avoids waiting for proxy timeout/error on large playlists
-      const PROXY_TRACK_LIMIT = 500;
-      const shouldSkipProxy = trackCount !== undefined && trackCount > PROXY_TRACK_LIMIT;
+      // For large playlists, use API-level pagination
+      const shouldUseBatchLoading = trackCount !== undefined && trackCount > LARGE_PLAYLIST_THRESHOLD;
 
-      if (shouldSkipProxy) {
-        console.log(`[Playlist] Large playlist detected (${trackCount} tracks), skipping proxy and using direct Plex API`);
+      if (shouldUseBatchLoading) {
+        console.log(`[Playlist] Large playlist (${trackCount} tracks) - using batched API loading`);
         
-        // Go directly to Plex, skip the proxy attempt entirely
-        const directUrl = `${serverUrl}${endpointPath}?X-Plex-Token=${selectedServer.accessToken || token}`;
+        // Fetch first batch immediately for instant UI
+        const firstBatchUrl = `${serverUrl}${endpointPath}?X-Plex-Token=${authToken}&X-Plex-Container-Start=0&X-Plex-Container-Size=${BATCH_SIZE}`;
         const startTime = Date.now();
-        const directResponse = await axios.get(directUrl, {
-          headers: {
-            'Accept': 'application/json',
-          },
+        const firstResponse = await axios.get(firstBatchUrl, {
+          headers: { 'Accept': 'application/json' },
         });
-        console.log(`[Playlist] Loaded ${trackCount} tracks in ${Date.now() - startTime}ms`);
-        data = directResponse.data as PlexPlaylistDetailResponse;
+        const firstData = firstResponse.data as PlexPlaylistDetailResponse;
+
+        if (!firstData.MediaContainer) {
+          setError('Invalid response from server');
+          return;
+        }
+
+        // Parse first batch
+        let allTracks: Track[] = (firstData.MediaContainer.Metadata || []).map((track) => ({
+          key: track.ratingKey || track.key || '',
+          title: track.title || 'Unknown Track',
+          artist: track.grandparentTitle,
+          artistKey: track.grandparentKey,
+          album: track.parentTitle,
+          albumKey: track.parentKey,
+          thumb: track.thumb || track.parentThumb || track.grandparentThumb,
+          duration: track.duration,
+          index: track.index,
+          year: track.year,
+          rating: track.rating,
+          userRating: track.userRating,
+          playlistItemID: track.playlistItemID,
+          Media: track.Media,
+        }));
+
+        // Set initial state with first batch (instant UI feedback)
+        const initialDetail: PlaylistDetail = {
+          key: playlistKey,
+          title: firstData.MediaContainer.title1 || 'Playlist',
+          summary: firstData.MediaContainer.summary,
+          type: firstData.MediaContainer.title2,
+          smart: firstData.MediaContainer.smart,
+          leafCount: firstData.MediaContainer.leafCount,
+          duration: firstData.MediaContainer.duration,
+          thumb: firstData.MediaContainer.thumb,
+          composite: firstData.MediaContainer.composite,
+          tracks: allTracks,
+        };
+        setPlaylistDetail(initialDetail);
+        setLoadingProgress({ loaded: allTracks.length, total: trackCount });
+
+        console.log(`[Playlist] Loaded first ${allTracks.length} tracks in ${Date.now() - startTime}ms`);
+
+        // Fetch remaining batches in background
+        const totalBatches = Math.ceil(trackCount / BATCH_SIZE);
+        for (let batchIndex = 1; batchIndex < totalBatches; batchIndex++) {
+          const offset = batchIndex * BATCH_SIZE;
+          const batchUrl = `${serverUrl}${endpointPath}?X-Plex-Token=${authToken}&X-Plex-Container-Start=${offset}&X-Plex-Container-Size=${BATCH_SIZE}`;
+          
+          const batchResponse = await axios.get(batchUrl, {
+            headers: { 'Accept': 'application/json' },
+          });
+          const batchData = batchResponse.data as PlexPlaylistDetailResponse;
+
+          const batchTracks: Track[] = (batchData.MediaContainer?.Metadata || []).map((track) => ({
+            key: track.ratingKey || track.key || '',
+            title: track.title || 'Unknown Track',
+            artist: track.grandparentTitle,
+            artistKey: track.grandparentKey,
+            album: track.parentTitle,
+            albumKey: track.parentKey,
+            thumb: track.thumb || track.parentThumb || track.grandparentThumb,
+            duration: track.duration,
+            index: track.index,
+            year: track.year,
+            rating: track.rating,
+            userRating: track.userRating,
+            playlistItemID: track.playlistItemID,
+            Media: track.Media,
+          }));
+
+          allTracks = [...allTracks, ...batchTracks];
+
+          // Update state progressively
+          setPlaylistDetail({
+            ...initialDetail,
+            tracks: allTracks,
+          });
+          setLoadingProgress({ loaded: allTracks.length, total: trackCount });
+
+          console.log(`[Playlist] Loaded batch ${batchIndex + 1}/${totalBatches} (${allTracks.length}/${trackCount} tracks)`);
+        }
+
+        console.log(`[Playlist] Completed loading all ${allTracks.length} tracks in ${Date.now() - startTime}ms`);
+        setLoadingProgress(null);
       } else {
-        // Normal flow: Try proxy first for better CORS handling
+        // Small playlist - load all at once (existing behavior)
+        let data: PlexPlaylistDetailResponse;
+        
         try {
           const proxyUrl = await getPlaylistsProxyUrl(
             serverUrl,
-            selectedServer.accessToken || token,
+            authToken,
             clientId,
             endpointPath
           );
-
           const response = await axios.get(proxyUrl);
           data = response.data as PlexPlaylistDetailResponse;
         } catch (proxyError: any) {
-          // If proxy fails (e.g., 6MB limit), try direct Plex API
-          // This works because we have valid authentication
-          console.warn('[Playlist] Proxy failed, attempting direct Plex connection:', proxyError.message);
-          
-          const directUrl = `${serverUrl}${endpointPath}?X-Plex-Token=${selectedServer.accessToken || token}`;
+          console.warn('[Playlist] Proxy failed, using direct connection:', proxyError.message);
+          const directUrl = `${serverUrl}${endpointPath}?X-Plex-Token=${authToken}`;
           const directResponse = await axios.get(directUrl, {
-            headers: {
-              'Accept': 'application/json',
-            },
+            headers: { 'Accept': 'application/json' },
           });
           data = directResponse.data as PlexPlaylistDetailResponse;
         }
+
+        if (!data.MediaContainer) {
+          setError('Invalid response from server');
+          return;
+        }
+
+        const tracks: Track[] = (data.MediaContainer.Metadata || []).map((track) => ({
+          key: track.ratingKey || track.key || '',
+          title: track.title || 'Unknown Track',
+          artist: track.grandparentTitle,
+          artistKey: track.grandparentKey,
+          album: track.parentTitle,
+          albumKey: track.parentKey,
+          thumb: track.thumb || track.parentThumb || track.grandparentThumb,
+          duration: track.duration,
+          index: track.index,
+          year: track.year,
+          rating: track.rating,
+          userRating: track.userRating,
+          playlistItemID: track.playlistItemID,
+          Media: track.Media,
+        }));
+
+        const totalDuration = data.MediaContainer.duration || 
+          tracks.reduce((sum, track) => sum + (track.duration || 0), 0);
+
+        const detail: PlaylistDetail = {
+          key: playlistKey,
+          title: data.MediaContainer.title1 || 'Playlist',
+          summary: data.MediaContainer.summary,
+          type: data.MediaContainer.title2,
+          smart: data.MediaContainer.smart,
+          leafCount: data.MediaContainer.leafCount,
+          duration: totalDuration,
+          thumb: data.MediaContainer.thumb,
+          composite: data.MediaContainer.composite,
+          tracks,
+        };
+
+        setPlaylistDetail(detail);
       }
-
-      if (!data.MediaContainer) {
-        setError('Invalid response from server');
-        return;
-      }
-
-      // Parse tracks from response
-      const tracks: Track[] = (data.MediaContainer.Metadata || []).map((track) => ({
-        key: track.ratingKey || track.key || '',
-        title: track.title || 'Unknown Track',
-        artist: track.grandparentTitle,
-        artistKey: track.grandparentKey,
-        album: track.parentTitle,
-        albumKey: track.parentKey,
-        thumb: track.thumb || track.parentThumb || track.grandparentThumb,
-        duration: track.duration,
-        index: track.index,
-        year: track.year,
-        rating: track.rating,
-        userRating: track.userRating,
-        playlistItemID: track.playlistItemID,
-        // Extract Media parts for streaming (like python-plexapi does)
-        Media: track.Media,
-      }));
-
-      // Calculate total duration if not provided by API
-      const totalDuration = data.MediaContainer.duration || 
-        tracks.reduce((sum, track) => sum + (track.duration || 0), 0);
-
-      // Build playlist detail object
-      const detail: PlaylistDetail = {
-        key: playlistKey,
-        title: data.MediaContainer.title1 || 'Playlist',
-        summary: data.MediaContainer.summary,
-        type: data.MediaContainer.title2,
-        smart: data.MediaContainer.smart,
-        leafCount: data.MediaContainer.leafCount,
-        duration: totalDuration,
-        thumb: data.MediaContainer.thumb,
-        composite: data.MediaContainer.composite,
-        tracks,
-      };
-
-      setPlaylistDetail(detail);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch playlist tracks';
       console.error('Error fetching playlist tracks:', err);
@@ -250,6 +323,7 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
   return {
     playlistDetail,
     loading,
+    loadingProgress,
     error,
     refetch: fetchPlaylistTracks,
   };

@@ -29,7 +29,7 @@ export default function PlaylistDetail() {
   // Decode playlist key from URL (base64 encoded to handle special chars)
   const playlistKey = playlistId ? decodeURIComponent(playlistId) : null;
   
-  const { playlistDetail, loading, error } = usePlaylistTracks(playlistKey, trackCountHint);
+  const { playlistDetail, loading, loadingProgress, error } = usePlaylistTracks(playlistKey, trackCountHint);
   const [, controls] = useAudioPlayer();
   const { setQueue, getCurrentTrack } = useQueueStore();
 
@@ -152,11 +152,11 @@ export default function PlaylistDetail() {
     navigate('/playlists');
   };
 
-  if (loading) {
+  if (loading && !playlistDetail) {
     return (
       <div className="playlist-detail">
         <div className="playlist-detail-loading">
-          <div className="spinner">Loading tracks...</div>
+          <div className="spinner">Loading playlist...</div>
         </div>
       </div>
     );
@@ -238,6 +238,21 @@ export default function PlaylistDetail() {
                 </>
               )}
             </div>
+
+            {/* Show loading progress for large playlists being loaded in batches */}
+            {loadingProgress && (
+              <div className="loading-progress">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${(loadingProgress.loaded / loadingProgress.total) * 100}%` }}
+                  />
+                </div>
+                <div className="progress-text">
+                  Loading tracks: {loadingProgress.loaded.toLocaleString()} / {loadingProgress.total.toLocaleString()}
+                </div>
+              </div>
+            )}
 
             <div className="playlist-actions">
               <button 
