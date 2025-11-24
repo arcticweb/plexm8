@@ -113,10 +113,12 @@ export default function PlaylistDetail() {
       mediaIndex: '0',
       partIndex: '0',
       protocol: 'http',
-      audioCodec: 'mp3',
-      maxAudioBitrate: '320',
+      directPlay: '0',
+      directStream: '0',
+      musicBitrate: '320',
     });
     
+    console.log(`[PlaylistDetail] Transcode URL: ${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`);
     return `${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`;
   };
 

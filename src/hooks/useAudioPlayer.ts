@@ -79,6 +79,7 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
   useEffect(() => {
     const audio = new Audio();
     audio.preload = 'metadata';
+    audio.crossOrigin = 'anonymous'; // Allow cross-origin requests with proper CORS
     audioRef.current = audio;
 
     // Event handlers
