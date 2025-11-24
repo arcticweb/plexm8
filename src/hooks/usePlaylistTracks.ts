@@ -22,6 +22,15 @@ export interface Track {
   rating?: number;
   userRating?: number;
   playlistItemID?: number;
+  // Media information for streaming
+  Media?: Array<{
+    Part?: Array<{
+      key?: string;
+      file?: string;
+      size?: number;
+      container?: string;
+    }>;
+  }>;
 }
 
 /**
@@ -61,6 +70,15 @@ interface PlexPlaylistDetailResponse {
       rating?: number;
       userRating?: number;
       playlistItemID?: number;
+      // Media parts (like python-plexapi Audio.Media)
+      Media?: Array<{
+        Part?: Array<{
+          key?: string;
+          file?: string;
+          size?: number;
+          container?: string;
+        }>;
+      }>;
     }>;
     title1?: string;
     title2?: string;
@@ -148,6 +166,8 @@ export function usePlaylistTracks(playlistKey: string | null) {
         rating: track.rating,
         userRating: track.userRating,
         playlistItemID: track.playlistItemID,
+        // Extract Media parts for streaming (like python-plexapi does)
+        Media: track.Media,
       }));
 
       // Calculate total duration if not provided by API

@@ -32,16 +32,25 @@ export default function PlaylistDetail() {
   const serverUrl = selectedServer ? selectBestConnection(selectedServer) : null;
   const currentTrack = getCurrentTrack();
 
-  const buildTrackUrl = (trackKey: string): string => {
+  const buildTrackUrl = (track: Track): string => {
     if (!serverUrl || !token) return '';
-    // Plex universal music endpoint - works like the web player
-    // This endpoint handles transcoding automatically if needed
-    const ratingKey = trackKey.startsWith('/library/metadata/') 
-      ? trackKey.replace('/library/metadata/', '') 
-      : trackKey;
     
-    // Use Plex universal music streaming endpoint
-    // This is what Plex Web uses for audio playback
+    // Replicate python-plexapi's Audio.url() method
+    // Try to get the direct media part key first (best quality, no transcoding)
+    const mediaPart = track.Media?.[0]?.Part?.[0];
+    
+    if (mediaPart?.key) {
+      // Direct file streaming (like python-plexapi does)
+      // This is the highest quality - no transcoding
+      return `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`;
+    }
+    
+    // Fallback: Use Plex universal music transcode endpoint
+    // This is what Plex Web uses when direct play isn't available
+    const ratingKey = track.key.startsWith('/library/metadata/') 
+      ? track.key.replace('/library/metadata/', '') 
+      : track.key;
+    
     const params = new URLSearchParams({
       'X-Plex-Token': token,
       path: `/library/metadata/${ratingKey}`,
@@ -72,7 +81,7 @@ export default function PlaylistDetail() {
       album: track.album,
       thumb: track.thumb ? getArtworkUrl(serverUrl, track.thumb, token) : undefined,
       duration: track.duration,
-      url: buildTrackUrl(track.key),
+      url: buildTrackUrl(track),
     }));
 
     // Set queue starting at clicked track

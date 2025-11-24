@@ -15,6 +15,14 @@ export interface Track {
     rating?: number;
     userRating?: number;
     playlistItemID?: number;
+    Media?: Array<{
+        Part?: Array<{
+            key?: string;
+            file?: string;
+            size?: number;
+            container?: string;
+        }>;
+    }>;
 }
 /**
  * Detailed playlist information with tracks
