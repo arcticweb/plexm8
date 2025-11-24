@@ -160,13 +160,24 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
           return;
         }
 
+        // Helper to extract filename from media
+        const getFileName = (track: any): string => {
+          const file = track.Media?.[0]?.Part?.[0]?.file || track.Media?.[0]?.Part?.[0]?.key || '';
+          if (!file) return 'Unknown Track';
+          // Extract just the filename without path
+          const parts = file.split(/[/\\]/);
+          const filename = parts[parts.length - 1];
+          // Remove extension for cleaner display
+          return filename.replace(/\.[^.]+$/, '');
+        };
+
         // Parse first batch
         let allTracks: Track[] = (firstData.MediaContainer.Metadata || []).map((track) => ({
           key: track.ratingKey || track.key || '',
-          title: track.title || 'Unknown Track',
-          artist: track.grandparentTitle,
+          title: track.title || getFileName(track),
+          artist: track.grandparentTitle || 'Unknown Artist',
           artistKey: track.grandparentKey,
-          album: track.parentTitle,
+          album: track.parentTitle || 'Unknown Album',
           albumKey: track.parentKey,
           thumb: track.thumb || track.parentThumb || track.grandparentThumb,
           duration: track.duration,
@@ -209,10 +220,10 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
 
           const batchTracks: Track[] = (batchData.MediaContainer?.Metadata || []).map((track) => ({
             key: track.ratingKey || track.key || '',
-            title: track.title || 'Unknown Track',
-            artist: track.grandparentTitle,
+            title: track.title || getFileName(track),
+            artist: track.grandparentTitle || 'Unknown Artist',
             artistKey: track.grandparentKey,
-            album: track.parentTitle,
+            album: track.parentTitle || 'Unknown Album',
             albumKey: track.parentKey,
             thumb: track.thumb || track.parentThumb || track.grandparentThumb,
             duration: track.duration,
@@ -265,12 +276,21 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
           return;
         }
 
+        // Helper to extract filename from media (for tracks without metadata)
+        const getFileName = (track: any): string => {
+          const file = track.Media?.[0]?.Part?.[0]?.file || track.Media?.[0]?.Part?.[0]?.key || '';
+          if (!file) return 'Unknown Track';
+          const parts = file.split(/[/\\]/);
+          const filename = parts[parts.length - 1];
+          return filename.replace(/\.[^.]+$/, '');
+        };
+
         const tracks: Track[] = (data.MediaContainer.Metadata || []).map((track) => ({
           key: track.ratingKey || track.key || '',
-          title: track.title || 'Unknown Track',
-          artist: track.grandparentTitle,
+          title: track.title || getFileName(track),
+          artist: track.grandparentTitle || 'Unknown Artist',
           artistKey: track.grandparentKey,
-          album: track.parentTitle,
+          album: track.parentTitle || 'Unknown Album',
           albumKey: track.parentKey,
           thumb: track.thumb || track.parentThumb || track.grandparentThumb,
           duration: track.duration,

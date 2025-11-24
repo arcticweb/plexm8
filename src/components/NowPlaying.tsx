@@ -71,6 +71,10 @@ export default function NowPlaying() {
                            problematicFormats.includes(container || '') ||
                            problematicFormats.includes(fileExt || '');
     
+    if (shouldTranscode) {
+      console.log(`[NowPlaying] Using transcode for ${track.title || 'Unknown'} (${fileExt || container || 'unknown format'})`);
+    }
+    
     if (shouldTranscode || !mediaPart?.key) {
       // Use Plex universal transcode endpoint
       const ratingKey = track.key?.replace?.('/library/metadata/', '') || track.ratingKey || '';
