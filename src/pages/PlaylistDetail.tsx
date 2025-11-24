@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePlaylistTracks, formatDuration, formatTotalDuration, getArtworkUrl, Track } from '../hooks/usePlaylistTracks';
 import { useAuthStore } from '../utils/storage';
@@ -31,6 +32,49 @@ export default function PlaylistDetail() {
   const selectedServer = getSelectedServer();
   const serverUrl = selectedServer ? selectBestConnection(selectedServer) : null;
   const currentTrack = getCurrentTrack();
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [tracksPerPage, setTracksPerPage] = useState(50); // Default 50 tracks per page
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter and paginate tracks
+  const filteredTracks = useMemo(() => {
+    if (!playlistDetail?.tracks) return [];
+    
+    if (!searchQuery.trim()) {
+      return playlistDetail.tracks;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return playlistDetail.tracks.filter((track: Track) => 
+      track.title.toLowerCase().includes(query) ||
+      (track.artist && track.artist.toLowerCase().includes(query)) ||
+      (track.album && track.album.toLowerCase().includes(query))
+    );
+  }, [playlistDetail?.tracks, searchQuery]);
+
+  // Calculate pagination
+  const totalTracks = filteredTracks.length;
+  const totalPages = Math.ceil(totalTracks / tracksPerPage);
+  const startIndex = (currentPage - 1) * tracksPerPage;
+  const endIndex = Math.min(startIndex + tracksPerPage, totalTracks);
+  const paginatedTracks = filteredTracks.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  };
+
+  const handleLoadMore = () => {
+    setCurrentPage((prev: number) => prev + 1);
+  };
+
+  const handleShowAll = () => {
+    setCurrentPage(1);
+    setTracksPerPage(totalTracks); // Show all tracks
+  };
 
   const buildTrackUrl = (track: Track): string => {
     if (!serverUrl || !token) return '';
@@ -71,10 +115,10 @@ export default function PlaylistDetail() {
   };
 
   const handlePlayTrack = (trackIndex: number) => {
-    if (!playlistDetail || !serverUrl || !token) return;
+    if (!serverUrl || !token) return;
 
-    // Build queue from all tracks
-    const queueTracks: QueueTrack[] = playlistDetail.tracks.map((track: Track) => ({
+    // Build queue from filtered tracks (respects search)
+    const queueTracks: QueueTrack[] = filteredTracks.map((track: Track) => ({
       key: track.key,
       title: track.title,
       artist: track.artist,
@@ -153,7 +197,11 @@ export default function PlaylistDetail() {
         <div className="playlist-info">
           {artworkUrl && (
             <div className="playlist-artwork">
-              <img src={artworkUrl} alt={playlistDetail.title} />
+              <img 
+                src={artworkUrl} 
+                alt={playlistDetail.title}
+                loading="lazy"
+              />
             </div>
           )}
           
@@ -199,6 +247,46 @@ export default function PlaylistDetail() {
         </div>
       </div>
 
+      {/* Search and pagination controls */}
+      <div className="track-controls">
+        <div className="track-search">
+          <input
+            type="text"
+            placeholder="Search tracks, artists, albums..."
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="search-input"
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => handleSearchChange('')}
+              className="btn-clear-search"
+              title="Clear search"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        <div className="track-pagination-info">
+          <span>
+            Showing {startIndex + 1}-{endIndex} of {totalTracks} tracks
+          </span>
+          <select 
+            value={tracksPerPage} 
+            onChange={(e) => {
+              setTracksPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="pagination-select"
+          >
+            <option value={25}>25 per page</option>
+            <option value={50}>50 per page</option>
+            <option value={100}>100 per page</option>
+            <option value={200}>200 per page</option>
+          </select>
+        </div>
+      </div>
+
       {/* Track listing */}
       <div className="track-list">
         <div className="track-list-header">
@@ -209,13 +297,15 @@ export default function PlaylistDetail() {
           <span className="track-header-duration">⏱</span>
         </div>
 
-        {playlistDetail.tracks.length === 0 ? (
+        {filteredTracks.length === 0 ? (
           <div className="track-list-empty">
-            <p>This playlist is empty</p>
+            <p>{searchQuery ? 'No tracks found matching your search' : 'This playlist is empty'}</p>
           </div>
         ) : (
           <div className="track-list-items">
-            {playlistDetail.tracks.map((track, index) => {
+            {paginatedTracks.map((track, pageIndex) => {
+              // Calculate actual index in the full filtered list
+              const actualIndex = startIndex + pageIndex;
               const isPlaying = currentTrack?.key === track.key;
               const trackArtworkUrl = track.thumb && serverUrl && token
                 ? getArtworkUrl(serverUrl, track.thumb, token)
@@ -223,12 +313,12 @@ export default function PlaylistDetail() {
 
               return (
                 <div
-                  key={track.playlistItemID || track.key || index}
+                  key={track.playlistItemID || track.key || pageIndex}
                   className={`track-item ${isPlaying ? 'playing' : ''}`}
-                  onClick={() => handlePlayTrack(index)}
+                  onClick={() => handlePlayTrack(actualIndex)}
                 >
                   <span className="track-index">
-                    {isPlaying ? '▶' : index + 1}
+                    {isPlaying ? '▶' : actualIndex + 1}
                   </span>
 
                   <div className="track-info">
@@ -237,6 +327,7 @@ export default function PlaylistDetail() {
                         src={trackArtworkUrl}
                         alt={track.album || 'Album art'}
                         className="track-thumb"
+                        loading="lazy"
                       />
                     )}
                     <div className="track-title-wrapper">
@@ -287,6 +378,58 @@ export default function PlaylistDetail() {
           </div>
         )}
       </div>
+
+      {/* Pagination controls */}
+      {filteredTracks.length > tracksPerPage && (
+        <div className="track-pagination">
+          <div className="pagination-buttons">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="btn-pagination"
+              title="First page"
+            >
+              ⏮ First
+            </button>
+            <button
+              onClick={() => setCurrentPage((prev: number) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="btn-pagination"
+              title="Previous page"
+            >
+              ◀ Prev
+            </button>
+            <span className="pagination-pages">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={handleLoadMore}
+              disabled={currentPage >= totalPages}
+              className="btn-pagination"
+              title="Next page"
+            >
+              Next ▶
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage >= totalPages}
+              className="btn-pagination"
+              title="Last page"
+            >
+              Last ⏭
+            </button>
+          </div>
+          {totalTracks > 200 && tracksPerPage < totalTracks && (
+            <button
+              onClick={handleShowAll}
+              className="btn-show-all"
+              title="Load all tracks (may be slow)"
+            >
+              Show All {totalTracks} Tracks
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
