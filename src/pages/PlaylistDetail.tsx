@@ -109,16 +109,14 @@ export default function PlaylistDetail() {
       return { url: '', requiresHeaders: false };
     }
     
-    // Check if format needs fetch+blob to bypass Firefox CORB
-    const mediaPart = track.Media?.[0]?.Part?.[0];
-    const fileExt = mediaPart?.key?.split('.').pop()?.toLowerCase();
-    const needsCustomHeaders = ['flac', 'ogg', 'oga', 'opus'].includes(fileExt || '');
-    
     // Build URL for supported formats
+    // Try direct playback first - fetch+blob as fallback only if needed
+    const mediaPart = track.Media?.[0]?.Part?.[0];
+    
     if (mediaPart?.key) {
       return {
         url: `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`,
-        requiresHeaders: needsCustomHeaders,
+        requiresHeaders: false, // Try direct first, let error handler deal with CORB if it happens
       };
     }
     
