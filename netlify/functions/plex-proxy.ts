@@ -134,24 +134,26 @@ async function handleOptions(event: HandlerEvent) {
 const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   const path = event.path || '';
   const method = event.httpMethod || 'GET';
+  const { endpoint } = event.queryStringParameters || {};
 
-  console.log(`${method} ${path}`);
+  console.log(`${method} ${path} endpoint=${endpoint}`);
 
   // Handle CORS preflight
   if (method === 'OPTIONS') {
     return handleOptions(event);
   }
 
-  // Route based on path
-  if (path.includes('/plex-proxy') || path.includes('/plex')) {
-    if (path.includes('playlists')) {
-      return handleGetPlaylists(event);
-    } else if (path.includes('rate') && method === 'POST') {
-      return handleRateTrack(event);
-    }
+  // Route based on endpoint query parameter or path
+  if (endpoint === 'playlists' || path.includes('playlists')) {
+    return handleGetPlaylists(event);
+  } else if ((endpoint === 'rate' || path.includes('rate')) && method === 'POST') {
+    return handleRateTrack(event);
   }
 
-  return addCorsHeaders(404, { error: 'Endpoint not found' });
+  return addCorsHeaders(404, { 
+    error: 'Endpoint not found',
+    message: `No handler for endpoint=${endpoint} method=${method} path=${path}`
+  });
 };
 
 export { handler };

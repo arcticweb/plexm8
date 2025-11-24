@@ -39,10 +39,26 @@ export default function ServerSelector() {
         }
       );
 
-      // Response is an array at root level, not under MediaContainer
+      // Response can be:
+      // 1. Array at root level
+      // 2. Object with numeric keys (converted array)
+      // 3. MediaContainer.Device array
+      let rawData = response.data;
+      
+      // Handle object with numeric keys (convert to array)
+      if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
+        // Check if it's an object with numeric keys like {"0": {...}, "1": {...}}
+        const keys = Object.keys(rawData);
+        if (keys.length > 0 && keys.every(k => !isNaN(Number(k)))) {
+          rawData = Object.values(rawData);
+        }
+      }
+
       // Show all devices that provide server capability (includes online and offline servers)
-      const fetchedServers = (Array.isArray(response.data) ? response.data : response.data?.MediaContainer?.Device || [])
+      const fetchedServers = (Array.isArray(rawData) ? rawData : rawData?.MediaContainer?.Device || [])
         .filter((device: any) => device.provides && device.provides.includes('server'));
+
+      console.log('Fetched servers:', fetchedServers);
 
       if (fetchedServers.length === 0) {
         setError('No Plex servers found');
