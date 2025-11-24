@@ -114,7 +114,8 @@ export function usePlaylistTracks(playlistKey: string | null) {
 
       // Build endpoint path for playlist items
       // Plex API: GET /playlists/{playlistId}/items
-      const endpointPath = `${playlistKey}/items`;
+      // Note: playlistKey already includes the full path (e.g., "/playlists/42850/items")
+      const endpointPath = playlistKey;
 
       // Route through proxy with base URL and endpoint path
       const proxyUrl = await getPlaylistsProxyUrl(
