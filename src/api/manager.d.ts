@@ -45,4 +45,3 @@ export * from './base';
 export * from './playlists';
 export * from './collections';
 export * from './status';
-//# sourceMappingURL=manager.d.ts.map

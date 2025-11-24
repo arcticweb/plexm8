@@ -65,4 +65,3 @@ export declare function getOrCreateClientId(): string;
  */
 export declare function clearAppData(): void;
 export type { Playlist, AuthState, PlaylistState };
-//# sourceMappingURL=storage.d.ts.map

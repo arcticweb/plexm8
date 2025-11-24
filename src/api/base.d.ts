@@ -61,4 +61,3 @@ export declare class PlexApiClient {
  * Helper function to create API client instances
  */
 export declare function createPlexApiClient(config: ApiClientConfig): PlexApiClient;
-//# sourceMappingURL=base.d.ts.map

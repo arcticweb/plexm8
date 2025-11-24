@@ -54,4 +54,3 @@ export declare class StatusApi extends PlexApiClient {
  * Factory function to create Status API instance
  */
 export declare function createStatusApi(config: ApiClientConfig): StatusApi;
-//# sourceMappingURL=status.d.ts.map

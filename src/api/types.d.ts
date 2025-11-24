@@ -141,4 +141,3 @@ export interface PaginationParams {
 export interface FilterParams {
     [key: string]: string | number | boolean;
 }
-//# sourceMappingURL=types.d.ts.map

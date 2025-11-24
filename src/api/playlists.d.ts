@@ -97,4 +97,3 @@ export declare class PlaylistsApi extends PlexApiClient {
  * Factory function to create Playlists API instance
  */
 export declare function createPlaylistsApi(config: ApiClientConfig): PlaylistsApi;
-//# sourceMappingURL=playlists.d.ts.map

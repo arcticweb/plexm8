@@ -16,7 +16,8 @@ export default defineConfig(({ command, mode }) => {
     },
     build: {
       outDir: 'dist',
-      sourcemap: true,
+      // Only generate source maps in development mode
+      sourcemap: mode === 'development',
       rollupOptions: {
         output: {
           manualChunks: {

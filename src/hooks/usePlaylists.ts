@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useAuthStore } from '../utils/storage';
+import { useAuthStore, getOrCreateClientId } from '../utils/storage';
 import axios from 'axios';
-import { PLEX_CONFIG, fillEndpointParams } from '../config/plex.config';
+import { PLEX_CONFIG, fillEndpointParams, buildPlexHeaders } from '../config/plex.config';
 
 export interface Playlist {
   key: string;
@@ -53,15 +53,13 @@ export function usePlaylists() {
       setLoading(true);
       setError(null);
 
+      const clientId = getOrCreateClientId();
+
       // First, get the user's resources (Plex servers)
       const resourcesResponse = await axios.get(
         `${PLEX_CONFIG.api.clients}/resources?includeHttps=1&includeRelay=1&includeIPv6=1`,
         {
-          headers: {
-            'X-Plex-Product': PLEX_CONFIG.product.name,
-            'X-Plex-Token': token,
-            'Accept': PLEX_CONFIG.defaults.accept,
-          },
+          headers: buildPlexHeaders(token, clientId),
         }
       );
 
@@ -91,11 +89,7 @@ export function usePlaylists() {
       const playlistsResponse = await axios.get(
         `${serverUrl}${playlistsEndpoint}`,
         {
-          headers: {
-            'X-Plex-Product': PLEX_CONFIG.product.name,
-            'X-Plex-Token': serverAccessToken || token,
-            'Accept': PLEX_CONFIG.defaults.accept,
-          },
+          headers: buildPlexHeaders(serverAccessToken || token, clientId),
         }
       );
 

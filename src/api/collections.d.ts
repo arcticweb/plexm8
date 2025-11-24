@@ -35,4 +35,3 @@ export declare class CollectionsApi extends PlexApiClient {
  * Factory function to create Collections API instance
  */
 export declare function createCollectionsApi(config: ApiClientConfig): CollectionsApi;
-//# sourceMappingURL=collections.d.ts.map

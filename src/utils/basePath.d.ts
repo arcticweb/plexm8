@@ -22,4 +22,3 @@ export declare const resolveAsset: (path: string) => string;
  * @returns Full absolute URL
  */
 export declare const resolveUrl: (path: string) => string;
-//# sourceMappingURL=basePath.d.ts.map
