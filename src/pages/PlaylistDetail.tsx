@@ -113,14 +113,8 @@ export default function PlaylistDetail() {
       mediaIndex: '0',
       partIndex: '0',
       protocol: 'http',
-      fastSeek: '1',
-      directPlay: '0',
-      directStream: '1',
-      subtitleSize: '100',
-      audioBoost: '100',
-      location: 'lan',
-      maxAudioChannels: '2',
-      'X-Plex-Client-Identifier': 'plexm8',
+      audioCodec: 'mp3',
+      maxAudioBitrate: '320',
     });
     
     return `${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`;
