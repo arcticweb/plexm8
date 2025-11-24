@@ -52,22 +52,48 @@ export default function NowPlaying() {
   const currentTrack = getCurrentTrack();
   
   // Helper function to build track URL on-demand
-  const buildTrackUrl = (track: any): string => {
+  const buildTrackUrl = (track: any, forceTranscode: boolean = false): string => {
     if (!serverUrl || !token) return '';
     
-    // If URL already exists, use it
-    if (track.url && track.url.trim() !== '') {
+    // If URL already exists and we're not forcing transcode, use it
+    if (!forceTranscode && track.url && track.url.trim() !== '') {
       return track.url;
     }
     
-    // Build URL from Media parts
+    // Check if we should use transcode for this format
     const mediaPart = track.Media?.[0]?.Part?.[0];
-    if (mediaPart?.key) {
-      return `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`;
+    const container = mediaPart?.container?.toLowerCase();
+    const fileExt = mediaPart?.key?.split('.').pop()?.toLowerCase();
+    
+    // Formats that may have CORS or browser support issues
+    const problematicFormats = ['wma', 'wmv', 'asf'];
+    const shouldTranscode = forceTranscode || 
+                           problematicFormats.includes(container || '') ||
+                           problematicFormats.includes(fileExt || '');
+    
+    if (shouldTranscode || !mediaPart?.key) {
+      // Use Plex universal transcode endpoint
+      const ratingKey = track.key?.replace?.('/library/metadata/', '') || track.ratingKey || '';
+      if (!ratingKey) {
+        console.error('[NowPlaying] Cannot build URL - no ratingKey:', track.title);
+        return '';
+      }
+      
+      const params = new URLSearchParams({
+        'X-Plex-Token': token,
+        path: `/library/metadata/${ratingKey}`,
+        mediaIndex: '0',
+        partIndex: '0',
+        protocol: 'http',
+        audioCodec: 'mp3',
+        maxAudioBitrate: '320',
+      });
+      
+      return `${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`;
     }
     
-    console.error('[NowPlaying] Cannot build URL for track:', track.title);
-    return '';
+    // Direct file streaming
+    return `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`;
   };
   
   // Build full artwork URL from relative path
@@ -97,11 +123,37 @@ export default function NowPlaying() {
     }
   }, [playerState.isPlaying, playerState.isLoading, playerState.currentTime, playerState.duration, currentTrack, hasNext, playNext, controls]);
 
-  // Handle playback errors
+  // Track if we've tried transcoding for current track
+  const [retriedWithTranscode, setRetriedWithTranscode] = useState(false);
+  const [lastErrorTime, setLastErrorTime] = useState(0);
+
+  // Handle playback errors with transcode fallback and rate limiting
   useEffect(() => {
     if (playerState.error) {
+      // Rate limit error handling to prevent React error #185 (too many renders)
+      const now = Date.now();
+      if (now - lastErrorTime < 500) {
+        console.warn('[NowPlaying] Error handling rate limited, skipping');
+        return;
+      }
+      setLastErrorTime(now);
+      
       console.error('Playback error:', playerState.error);
-      // Auto-skip to next track on error
+      
+      // First try: Retry current track with transcode
+      if (!retriedWithTranscode && currentTrack) {
+        console.log('[NowPlaying] Retrying with transcode for:', currentTrack.title);
+        setRetriedWithTranscode(true);
+        const url = buildTrackUrl(currentTrack, true); // Force transcode
+        if (url) {
+          controls.loadTrack(url);
+          controls.play();
+          return;
+        }
+      }
+      
+      // Second try failed or no current track - skip to next
+      setRetriedWithTranscode(false);
       if (hasNext()) {
         const nextTrack = playNext();
         if (nextTrack) {
@@ -113,7 +165,14 @@ export default function NowPlaying() {
         }
       }
     }
-  }, [playerState.error, hasNext, playNext, controls]);
+  }, [playerState.error, hasNext, playNext, controls, currentTrack, retriedWithTranscode, lastErrorTime]);
+
+  // Reset retry flag when track changes successfully
+  useEffect(() => {
+    if (playerState.isPlaying && !playerState.error) {
+      setRetriedWithTranscode(false);
+    }
+  }, [playerState.isPlaying, playerState.error]);
 
   const handlePlayPause = () => {
     controls.togglePlayPause();
