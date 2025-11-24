@@ -80,7 +80,8 @@ export function usePlaylists() {
 
       // Route through Netlify Function proxy to bypass CORS restrictions
       // Encode serverUrl as base64 for safe query parameter passing
-      const encodedServerUrl = Buffer.from(serverUrl).toString('base64');
+      // Use btoa() for browser compatibility (instead of Buffer.from() which is Node.js only)
+      const encodedServerUrl = btoa(serverUrl);
 
       const proxyResponse = await axios.get('/.netlify/functions/plex-proxy', {
         params: {
