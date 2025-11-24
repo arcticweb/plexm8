@@ -79,7 +79,8 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
   useEffect(() => {
     const audio = new Audio();
     audio.preload = 'metadata';
-    audio.crossOrigin = 'anonymous'; // Allow cross-origin requests with proper CORS
+    // NOTE: crossOrigin='anonymous' breaks Plex authentication (token in URL)
+    // Removing it allows credentials to be sent, fixing HTTP 500 errors
     audioRef.current = audio;
 
     // Event handlers
