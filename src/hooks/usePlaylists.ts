@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore, getOrCreateClientId } from '../utils/storage';
+import { useServerStore } from '../utils/serverContext';
 import axios from 'axios';
 import { PLEX_CONFIG, fillEndpointParams, buildPlexHeaders } from '../config/plex.config';
 
@@ -39,6 +40,7 @@ interface PlexPlaylistResponse {
  */
 export function usePlaylists() {
   const { token } = useAuthStore();
+  const { getSelectedServer } = useServerStore();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,39 +51,32 @@ export function usePlaylists() {
       return;
     }
 
+    const selectedServer = getSelectedServer();
+    if (!selectedServer) {
+      setError('No server selected');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
       const clientId = getOrCreateClientId();
 
-      // First, get the user's resources (Plex servers)
-      const resourcesResponse = await axios.get(
-        `${PLEX_CONFIG.api.clients}/resources?includeHttps=1&includeRelay=1&includeIPv6=1`,
-        {
-          headers: buildPlexHeaders(token, clientId),
-        }
-      );
-
-      const resources = resourcesResponse.data?.MediaContainer?.Device || [];
-      if (resources.length === 0) {
-        setError('No Plex servers found');
-        return;
-      }
-
-      // Get the first server (primary)
-      const server = resources[0];
-      const serverAccessToken = server.accessToken;
-      
       // Get connection URL (prefer local)
-      let serverUrl = server.baseuri;
-      if (server.Connection && Array.isArray(server.Connection)) {
-        const localConnection = server.Connection.find((c: any) => c.local === '1');
+      let serverUrl = selectedServer.connections?.[0]?.uri;
+      if (selectedServer.connections && Array.isArray(selectedServer.connections)) {
+        const localConnection = selectedServer.connections.find((c) => c.local === true);
         if (localConnection) {
           serverUrl = localConnection.uri;
         } else {
-          serverUrl = server.Connection[0]?.uri || serverUrl;
+          serverUrl = selectedServer.connections[0]?.uri;
         }
+      }
+
+      if (!serverUrl) {
+        setError('No valid connection found for selected server');
+        return;
       }
 
       // Now fetch playlists from the server
@@ -89,7 +84,7 @@ export function usePlaylists() {
       const playlistsResponse = await axios.get(
         `${serverUrl}${playlistsEndpoint}`,
         {
-          headers: buildPlexHeaders(serverAccessToken || token, clientId),
+          headers: buildPlexHeaders(selectedServer.accessToken || token, clientId),
         }
       );
 
@@ -117,12 +112,12 @@ export function usePlaylists() {
     }
   };
 
-  // Fetch playlists on mount or when token changes
+  // Fetch playlists when token or selected server changes
   useEffect(() => {
     if (token) {
       fetchPlaylists();
     }
-  }, [token]);
+  }, [token, getSelectedServer()?.clientIdentifier]);
 
   return { playlists, loading, error, refetch: fetchPlaylists };
 }
