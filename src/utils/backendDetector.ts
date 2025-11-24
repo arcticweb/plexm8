@@ -52,7 +52,18 @@ async function checkLocalPythonBackend(): Promise<boolean> {
  * Returns configuration for the best available option
  */
 export async function detectBackend(): Promise<BackendConfig> {
+  // TEMPORARY FIX: Force direct mode to bypass Netlify proxy timeouts
+  // The Netlify Functions can't reach the Plex server (network/firewall issue)
+  // Browser can reach it directly, so use direct mode
+  return {
+    type: 'direct',
+    baseUrl: '',
+    available: false,
+  };
+  
   // Check if we're on Netlify (production)
+  // DISABLED: Netlify Functions timing out (ETIMEDOUT)
+  /*
   if (window.location.hostname.includes('netlify.app')) {
     return {
       type: 'netlify',
@@ -60,6 +71,7 @@ export async function detectBackend(): Promise<BackendConfig> {
       available: true,
     };
   }
+  */
 
   // In local development, check what's available
   const [netlifyAvailable, pythonAvailable] = await Promise.all([
