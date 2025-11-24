@@ -80,32 +80,37 @@ export default function PlaylistDetail() {
     setTracksPerPage(totalTracks); // Show all tracks
   };
 
-  const buildTrackUrl = (track: Track): { url: string; requiresHeaders: boolean } => {
-    if (!serverUrl || !token) return { url: '', requiresHeaders: false };
-    
-    // Check format to determine if transcoding is needed
+  // Check if track format is supported in browser
+  const isTrackSupported = (track: Track): { supported: boolean; format: string; reason: string } => {
     const mediaPart = track.Media?.[0]?.Part?.[0];
     const container = mediaPart?.container?.toLowerCase();
-    const fileExt = mediaPart?.key?.split('.').pop()?.toLowerCase();
+    const fileExt = mediaPart?.key?.split('.').pop()?.toLowerCase() || 'unknown';
     
-    // Formats that need transcoding via Plex
-    const problematicFormats = ['wma', 'wmv', 'asf', 'wv'];
-    const needsTranscode = problematicFormats.includes(container || '') ||
-                           problematicFormats.includes(fileExt || '');
+    const unsupportedFormats = ['wma', 'wmv', 'asf', 'wv'];
+    const isUnsupported = unsupportedFormats.includes(container || '') ||
+                          unsupportedFormats.includes(fileExt || '');
     
-    if (needsTranscode) {
-      console.warn(`[PlaylistDetail] ⚠️ Unsupported format: ${track.title} (${fileExt || container})`);
-      console.warn('[PlaylistDetail] WMA/ASF/WMV cannot be played in browser - Plex transcode requires desktop client');
-      
-      // Return empty - browser cannot transcode these formats
-      // Plex's transcode API requires client-specific profiles that browsers don't have
+    if (isUnsupported) {
       return {
-        url: '',
-        requiresHeaders: false,
+        supported: false,
+        format: fileExt.toUpperCase(),
+        reason: 'Not supported in web browsers. Use Plex app or convert to MP3/FLAC/M4A.',
       };
     }
     
+    return { supported: true, format: fileExt.toUpperCase(), reason: '' };
+  };
+
+  const buildTrackUrl = (track: Track): { url: string; requiresHeaders: boolean } => {
+    if (!serverUrl || !token) return { url: '', requiresHeaders: false };
+    
+    const { supported } = isTrackSupported(track);
+    if (!supported) {
+      return { url: '', requiresHeaders: false };
+    }
+    
     // Direct streaming for supported formats
+    const mediaPart = track.Media?.[0]?.Part?.[0];
     if (mediaPart?.key) {
       return {
         url: `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`,
@@ -148,13 +153,9 @@ export default function PlaylistDetail() {
       controls.loadTrack(trackInfo.url, trackInfo.requiresHeaders, clientId);
       controls.play();
     } else {
-      // No valid URL - unsupported format or missing media part
-      console.warn('[PlaylistDetail] Cannot play:', filteredTracks[trackIndex].title);
-      const track = filteredTracks[trackIndex];
-      const mediaPart = track.Media?.[0]?.Part?.[0];
-      const fileExt = mediaPart?.key?.split('.').pop()?.toUpperCase() || 'unknown';
-      
-      alert(`⚠️ Cannot play: ${track.title}\n\nFormat: ${fileExt}\nReason: This audio format is not supported in web browsers.\n\nSolution: Convert to MP3, FLAC, or M4A for web playback, or use the Plex desktop/mobile app.`);
+      // Track is unsupported - user will see visual indicator, don't play
+      const { format, reason } = isTrackSupported(filteredTracks[trackIndex]);
+      console.warn(`[PlaylistDetail] Cannot play: ${filteredTracks[trackIndex].title} (${format}) - ${reason}`);
     }
   };
 
@@ -346,12 +347,17 @@ export default function PlaylistDetail() {
               const trackArtworkUrl = track.thumb && serverUrl && token
                 ? getArtworkUrl(serverUrl, track.thumb, token)
                 : undefined;
+              
+              // Check if track is supported
+              const { supported, format, reason } = isTrackSupported(track);
 
               return (
                 <div
                   key={track.playlistItemID || track.key || pageIndex}
-                  className={`track-item ${isPlaying ? 'playing' : ''}`}
-                  onClick={() => handlePlayTrack(actualIndex)}
+                  className={`track-item ${isPlaying ? 'playing' : ''} ${!supported ? 'unsupported' : ''}`}
+                  onClick={() => supported && handlePlayTrack(actualIndex)}
+                  title={!supported ? `${format}: ${reason}` : undefined}
+                  style={{ cursor: supported ? 'pointer' : 'not-allowed' }}
                 >
                   <span className="track-index">
                     {isPlaying ? '▶' : actualIndex + 1}
@@ -370,6 +376,11 @@ export default function PlaylistDetail() {
                       <span className="track-title">{track.title}</span>
                       {track.year && (
                         <span className="track-year">({track.year})</span>
+                      )}
+                      {!supported && (
+                        <span className="track-format-badge" title={reason}>
+                          {format}
+                        </span>
                       )}
                     </div>
                   </div>

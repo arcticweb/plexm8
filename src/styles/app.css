@@ -1324,6 +1324,22 @@ body {
   color: var(--color-primary);
 }
 
+/* Unsupported format styles */
+.track-item.unsupported {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
+.track-item.unsupported:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.track-item.unsupported .track-title,
+.track-item.unsupported .track-artist,
+.track-item.unsupported .track-album {
+  color: var(--color-text-secondary);
+}
+
 .track-info {
   display: flex;
   align-items: center;
@@ -1357,6 +1373,32 @@ body {
   color: var(--color-text-secondary);
   font-size: 0.85rem;
   margin-left: var(--spacing-xs);
+}
+
+.track-format-badge {
+  display: inline-block;
+  background: rgba(255, 152, 0, 0.2);
+  color: rgba(255, 152, 0, 1);
+  border: 1px solid rgba(255, 152, 0, 0.4);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 8px;
+  vertical-align: middle;
+  cursor: help;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.track-format-badge:hover {
+  background: rgba(255, 152, 0, 0.3);
+}
+
+.track-item.unsupported .track-format-badge {
+  background: rgba(158, 158, 158, 0.2);
+  color: rgba(158, 158, 158, 1);
+  border-color: rgba(158, 158, 158, 0.4);
 }
 
 .track-artist,
