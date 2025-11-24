@@ -109,12 +109,16 @@ export default function PlaylistDetail() {
       return { url: '', requiresHeaders: false };
     }
     
-    // Direct streaming for supported formats
+    // Check if format needs fetch+blob to bypass Firefox CORB
     const mediaPart = track.Media?.[0]?.Part?.[0];
+    const fileExt = mediaPart?.key?.split('.').pop()?.toLowerCase();
+    const needsCustomHeaders = ['flac', 'ogg', 'oga', 'opus'].includes(fileExt || '');
+    
+    // Build URL for supported formats
     if (mediaPart?.key) {
       return {
         url: `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`,
-        requiresHeaders: false,
+        requiresHeaders: needsCustomHeaders,
       };
     }
     

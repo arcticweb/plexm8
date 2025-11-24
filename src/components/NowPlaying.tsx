@@ -75,11 +75,14 @@ export default function NowPlaying() {
       return { url: '', requiresHeaders: false };
     }
     
+    // FLAC and other formats need fetch+blob to bypass Firefox CORB blocking
+    const needsCustomHeaders = ['flac', 'ogg', 'oga', 'opus'].includes(fileExt || '');
+    
     // Direct streaming for supported formats
     if (mediaPart?.key) {
       return {
         url: `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`,
-        requiresHeaders: false,
+        requiresHeaders: needsCustomHeaders,
       };
     }
     
