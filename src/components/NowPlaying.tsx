@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useQueueStore } from '../utils/queueStore';
 import { formatTime } from '../hooks/useAudioPlayer';
@@ -9,10 +9,12 @@ import { formatTime } from '../hooks/useAudioPlayer';
  * Sticky bottom bar showing current track and playback controls.
  * Displays album artwork, track info, progress bar, and player controls.
  * Responsive: Full controls on desktop, minimal on mobile.
+ * Can be minimized to reduce screen space usage.
  */
 
 export default function NowPlaying() {
   const [playerState, controls] = useAudioPlayer();
+  const [isMinimized, setIsMinimized] = useState(false);
   const {
     getCurrentTrack,
     playNext,
@@ -43,6 +45,8 @@ export default function NowPlaying() {
   };
 
   const handleNext = () => {
+    // Stop current track before loading next
+    controls.pause();
     const nextTrack = playNext();
     if (nextTrack) {
       controls.loadTrack(nextTrack.url);
@@ -56,6 +60,8 @@ export default function NowPlaying() {
       controls.seek(0);
       controls.play();
     } else {
+      // Stop current track before loading previous
+      controls.pause();
       const prevTrack = playPrevious();
       if (prevTrack) {
         controls.loadTrack(prevTrack.url);
@@ -91,7 +97,16 @@ export default function NowPlaying() {
   }
 
   return (
-    <div className="now-playing">
+    <div className={`now-playing ${isMinimized ? 'minimized' : ''}`}>
+      {/* Minimize/Maximize Button */}
+      <button
+        className="now-playing-minimize"
+        onClick={() => setIsMinimized(!isMinimized)}
+        title={isMinimized ? 'Expand player' : 'Minimize player'}
+      >
+        {isMinimized ? '▲' : '▼'}
+      </button>
+
       <div className="now-playing-container">
         {/* Track Info */}
         <div className="now-playing-info">
