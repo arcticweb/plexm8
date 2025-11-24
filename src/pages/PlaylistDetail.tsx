@@ -83,15 +83,26 @@ export default function PlaylistDetail() {
   const buildTrackUrl = (track: Track): string => {
     if (!serverUrl || !token) return '';
     
-    // Try to get the direct media part key first (best quality, no transcoding)
+    // Check format to determine if transcoding is needed
     const mediaPart = track.Media?.[0]?.Part?.[0];
+    const container = mediaPart?.container?.toLowerCase();
+    const fileExt = mediaPart?.key?.split('.').pop()?.toLowerCase();
     
-    if (mediaPart?.key) {
-      // Direct file streaming (like python-plexapi does)
+    // Formats that have CORS or browser support issues - must transcode
+    const problematicFormats = ['wma', 'wmv', 'asf', 'wv'];
+    const needsTranscode = problematicFormats.includes(container || '') ||
+                           problematicFormats.includes(fileExt || '');
+    
+    if (needsTranscode) {
+      console.log(`[PlaylistDetail] Transcoding ${track.title} (format: ${fileExt || container || 'unknown'})`);
+    }
+    
+    // If format is supported and has direct media part, use direct streaming
+    if (!needsTranscode && mediaPart?.key) {
       return `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`;
     }
     
-    // Fallback: Use Plex universal music transcode endpoint
+    // Use Plex universal transcode endpoint for problematic formats or missing media parts
     const ratingKey = track.key.startsWith('/library/metadata/') 
       ? track.key.replace('/library/metadata/', '') 
       : track.key;
