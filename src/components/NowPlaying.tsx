@@ -10,11 +10,24 @@ import { formatTime } from '../hooks/useAudioPlayer';
  * Displays album artwork, track info, progress bar, and player controls.
  * Responsive: Full controls on desktop, minimal on mobile.
  * Can be minimized to reduce screen space usage.
+ * 
+ * Note: This component persists across route changes since it's placed
+ * outside <Routes> in App.tsx. The audio player state is maintained
+ * via useRef in the useAudioPlayer hook.
  */
 
 export default function NowPlaying() {
   const [playerState, controls] = useAudioPlayer();
-  const [isMinimized, setIsMinimized] = useState(false);
+  // Persist minimize state in localStorage
+  const [isMinimized, setIsMinimized] = useState(() => {
+    const saved = localStorage.getItem('plexm8-player-minimized');
+    return saved === 'true';
+  });
+  
+  // Save minimize state
+  useEffect(() => {
+    localStorage.setItem('plexm8-player-minimized', String(isMinimized));
+  }, [isMinimized]);
   const {
     getCurrentTrack,
     playNext,
@@ -31,14 +44,37 @@ export default function NowPlaying() {
 
   // Auto-play next track when current track ends
   useEffect(() => {
+    // Track ended (time reset to 0, not playing, not loading)
+    if (!playerState.isPlaying && 
+        !playerState.isLoading && 
+        playerState.currentTime === 0 && 
+        playerState.duration > 0 &&
+        currentTrack) {
+      // Track finished - play next
+      if (hasNext()) {
+        const nextTrack = playNext();
+        if (nextTrack) {
+          controls.loadTrack(nextTrack.url);
+          controls.play();
+        }
+      }
+    }
+  }, [playerState.isPlaying, playerState.isLoading, playerState.currentTime, playerState.duration, currentTrack, hasNext, playNext, controls]);
+
+  // Handle playback errors
+  useEffect(() => {
     if (playerState.error) {
       console.error('Playback error:', playerState.error);
       // Auto-skip to next track on error
       if (hasNext()) {
-        handleNext();
+        const nextTrack = playNext();
+        if (nextTrack) {
+          controls.loadTrack(nextTrack.url);
+          controls.play();
+        }
       }
     }
-  }, [playerState.error]);
+  }, [playerState.error, hasNext, playNext, controls]);
 
   const handlePlayPause = () => {
     controls.togglePlayPause();

@@ -135,16 +135,32 @@ export function usePlaylistTracks(playlistKey: string | null) {
       // Note: playlistKey already includes the full path (e.g., "/playlists/42850/items")
       const endpointPath = playlistKey;
 
-      // Route through proxy with base URL and endpoint path
-      const proxyUrl = await getPlaylistsProxyUrl(
-        serverUrl,
-        selectedServer.accessToken || token,
-        clientId,
-        endpointPath
-      );
+      let data: PlexPlaylistDetailResponse;
 
-      const response = await axios.get(proxyUrl);
-      const data = response.data as PlexPlaylistDetailResponse;
+      try {
+        // Try proxy first (for CORS)
+        const proxyUrl = await getPlaylistsProxyUrl(
+          serverUrl,
+          selectedServer.accessToken || token,
+          clientId,
+          endpointPath
+        );
+
+        const response = await axios.get(proxyUrl);
+        data = response.data as PlexPlaylistDetailResponse;
+      } catch (proxyError: any) {
+        // If proxy fails (e.g., 6MB limit), try direct Plex API
+        // This works because we have valid authentication
+        console.warn('Proxy failed, attempting direct Plex connection:', proxyError.message);
+        
+        const directUrl = `${serverUrl}${endpointPath}?X-Plex-Token=${selectedServer.accessToken || token}`;
+        const directResponse = await axios.get(directUrl, {
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        data = directResponse.data as PlexPlaylistDetailResponse;
+      }
 
       if (!data.MediaContainer) {
         setError('Invalid response from server');
