@@ -174,10 +174,18 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
     try {
       await audioRef.current.play();
     } catch (error) {
-      console.error('Play failed:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Play failed';
+      
+      // Ignore "aborted by user" errors - these are normal when user clicks pause
+      if (errorMsg.includes('aborted by the user') || errorMsg.includes('aborted by user')) {
+        console.log('[AudioPlayer] Play aborted by user (normal)');
+        return;
+      }
+      
+      console.error('[AudioPlayer] Play failed:', error);
       setState((prev) => ({ 
         ...prev, 
-        error: error instanceof Error ? error.message : 'Play failed',
+        error: errorMsg,
       }));
     }
   }, []);

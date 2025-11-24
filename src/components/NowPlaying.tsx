@@ -122,21 +122,27 @@ export default function NowPlaying() {
   const [retriedWithTranscode, setRetriedWithTranscode] = useState(false);
   const [lastErrorTime, setLastErrorTime] = useState(0);
 
-  // Handle playback errors with transcode fallback and rate limiting
+  // Handle playback errors - but ignore user-initiated aborts
   useEffect(() => {
     if (playerState.error) {
+      // Ignore "aborted by user" errors - these happen when user clicks pause
+      if (playerState.error.includes('aborted by the user') || 
+          playerState.error.includes('aborted by user')) {
+        console.log('[NowPlaying] Ignoring user-initiated abort');
+        return;
+      }
+      
       // Rate limit error handling to prevent React error #185 (too many renders)
       const now = Date.now();
-      if (now - lastErrorTime < 500) {
+      if (now - lastErrorTime < 1000) { // Increased from 500ms to 1000ms
         console.warn('[NowPlaying] Error handling rate limited, skipping');
         return;
       }
       setLastErrorTime(now);
       
-      console.error('Playback error:', playerState.error);
+      console.error('[NowPlaying] Playback error (will skip):', playerState.error);
       
-      // Skip to next track on error
-      console.log('[NowPlaying] Error occurred, skipping to next track');
+      // Skip to next track on actual errors
       setRetriedWithTranscode(false);
       if (hasNext()) {
         const nextTrack = playNext();
@@ -146,9 +152,6 @@ export default function NowPlaying() {
             const clientId = localStorage.getItem('clientId') || 'plexm8';
             controls.loadTrack(trackInfo.url, trackInfo.requiresHeaders, clientId);
             controls.play();
-          } else {
-            // Next track also has no URL - will be handled by next error cycle
-            console.log('[NowPlaying] Next track also has no URL, will skip again');
           }
         }
       }
