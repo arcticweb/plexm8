@@ -50,9 +50,15 @@ async function handleGetPlaylists(event: HandlerEvent) {
     // Decode base64-encoded URL
     const decodedUrl = Buffer.from(serverUrl, 'base64').toString('utf-8');
     
-    // Use decoded URL as-is (may already contain endpoint path)
-    // or append /playlists if endpoint param explicitly requests it
-    const plexUrl = decodedUrl;
+    // If the URL doesn't already contain "/playlists", append it
+    // This handles both cases:
+    // 1. Base URL only (e.g., https://server.com:32400) -> append /playlists
+    // 2. URL with playlist path already (e.g., https://server.com:32400/playlists/123/items) -> use as-is
+    let plexUrl = decodedUrl;
+    
+    if (!decodedUrl.includes('/playlists')) {
+      plexUrl = `${decodedUrl}/playlists`;
+    }
 
     const response = await axios.get(plexUrl, {
       headers: getPlexHeaders(token, clientId),
