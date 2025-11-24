@@ -94,27 +94,14 @@ export default function PlaylistDetail() {
                            problematicFormats.includes(fileExt || '');
     
     if (needsTranscode) {
-      console.log(`[PlaylistDetail] Transcoding ${track.title} (${fileExt || container}) via fetch with headers`);
+      console.warn(`[PlaylistDetail] ⚠️ Unsupported format: ${track.title} (${fileExt || container})`);
+      console.warn('[PlaylistDetail] WMA/ASF/WMV cannot be played in browser - Plex transcode requires desktop client');
       
-      // Build transcode URL
-      const ratingKey = track.key.startsWith('/library/metadata/') 
-        ? track.key.replace('/library/metadata/', '') 
-        : track.key;
-      
-      const params = new URLSearchParams({
-        'X-Plex-Token': token,
-        path: `/library/metadata/${ratingKey}`,
-        mediaIndex: '0',
-        partIndex: '0',
-        protocol: 'http',
-        directPlay: '0',
-        directStream: '0',
-        musicBitrate: '320',
-      });
-      
+      // Return empty - browser cannot transcode these formats
+      // Plex's transcode API requires client-specific profiles that browsers don't have
       return {
-        url: `${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`,
-        requiresHeaders: true, // Needs fetch with X-Plex-Client-Identifier header
+        url: '',
+        requiresHeaders: false,
       };
     }
     
@@ -161,9 +148,13 @@ export default function PlaylistDetail() {
       controls.loadTrack(trackInfo.url, trackInfo.requiresHeaders, clientId);
       controls.play();
     } else {
-      // No valid URL - likely missing media part
-      console.warn('[PlaylistDetail] Cannot build URL for:', filteredTracks[trackIndex].title);
-      alert(`Cannot play this track: ${filteredTracks[trackIndex].title}\n\nMedia file not found.`);
+      // No valid URL - unsupported format or missing media part
+      console.warn('[PlaylistDetail] Cannot play:', filteredTracks[trackIndex].title);
+      const track = filteredTracks[trackIndex];
+      const mediaPart = track.Media?.[0]?.Part?.[0];
+      const fileExt = mediaPart?.key?.split('.').pop()?.toUpperCase() || 'unknown';
+      
+      alert(`⚠️ Cannot play: ${track.title}\n\nFormat: ${fileExt}\nReason: This audio format is not supported in web browsers.\n\nSolution: Convert to MP3, FLAC, or M4A for web playback, or use the Plex desktop/mobile app.`);
     }
   };
 

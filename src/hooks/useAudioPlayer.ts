@@ -223,11 +223,21 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
       try {
         setState((prev) => ({ ...prev, isLoading: true, error: null }));
         
+        console.log('[AudioPlayer] Fetching transcode with headers:', url);
+        
         const response = await fetch(url, {
+          method: 'GET',
           headers: {
             'X-Plex-Client-Identifier': clientId,
             'X-Plex-Product': 'PlexM8',
+            'X-Plex-Platform': 'Web',
+            'X-Plex-Platform-Version': navigator.userAgent,
+            'X-Plex-Device': navigator.platform,
+            'X-Plex-Device-Name': 'PlexM8 Web Player',
+            'Accept': '*/*',
           },
+          mode: 'cors',
+          credentials: 'omit',
         });
         
         if (!response.ok) {

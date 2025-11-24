@@ -70,29 +70,9 @@ export default function NowPlaying() {
                           problematicFormats.includes(fileExt || '');
     
     if (needsTranscode) {
-      console.log(`[NowPlaying] Transcoding ${track.title || 'Unknown'} (${fileExt || container})`);
-      
-      const ratingKey = track.key?.replace?.('/library/metadata/', '') || track.ratingKey || '';
-      if (!ratingKey) {
-        console.error('[NowPlaying] Cannot build transcode URL - no ratingKey');
-        return { url: '', requiresHeaders: false };
-      }
-      
-      const params = new URLSearchParams({
-        'X-Plex-Token': token,
-        path: `/library/metadata/${ratingKey}`,
-        mediaIndex: '0',
-        partIndex: '0',
-        protocol: 'http',
-        directPlay: '0',
-        directStream: '0',
-        musicBitrate: '320',
-      });
-      
-      return {
-        url: `${serverUrl}/music/:/transcode/universal/start.mp3?${params.toString()}`,
-        requiresHeaders: true,
-      };
+      console.warn(`[NowPlaying] ⚠️ Unsupported format: ${track.title || 'Unknown'} (${fileExt || container}) - Skipping`);
+      // WMA/ASF/WMV cannot be transcoded in browser - Plex API restriction
+      return { url: '', requiresHeaders: false };
     }
     
     // Direct streaming for supported formats
