@@ -36,8 +36,11 @@ export default function PlaylistDetail() {
     if (!serverUrl || !token) return '';
     // Plex universal transcode endpoint for audio streaming
     // This endpoint handles format conversion and works with HTML5 audio
-    // trackKey format: /library/metadata/{ratingKey}
-    return `${serverUrl}/audio/:/transcode/universal/start.mp3?path=${encodeURIComponent(trackKey)}&mediaIndex=0&partIndex=0&protocol=http&X-Plex-Token=${token}`;
+    // Ensure trackKey has the full path format: /library/metadata/{ratingKey}
+    const fullPath = trackKey.startsWith('/library/metadata/') 
+      ? trackKey 
+      : `/library/metadata/${trackKey}`;
+    return `${serverUrl}/audio/:/transcode/universal/start.mp3?path=${encodeURIComponent(fullPath)}&mediaIndex=0&partIndex=0&protocol=http&X-Plex-Token=${token}`;
   };
 
   const handlePlayTrack = (trackIndex: number) => {
