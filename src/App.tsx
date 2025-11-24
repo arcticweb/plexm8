@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import PlexAuth from './components/PlexAuth';
 import Home from './pages/Home';
 import Playlists from './pages/Playlists';
+import PlaylistDetail from './pages/PlaylistDetail';
 import Settings from './pages/Settings';
 import InstallPrompt from './components/InstallPrompt';
 import { useAuthStore } from './utils/storage';
@@ -35,6 +36,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/playlists" element={<Playlists />} />
+            <Route path="/playlists/:playlistId" element={<PlaylistDetail />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         )}

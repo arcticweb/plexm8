@@ -81,7 +81,12 @@ function Settings() {
   return (
     <div className="settings-page">
       <div className="settings-header">
-        <h1>Settings</h1>
+        <div className="settings-header-top">
+          <h1>Settings</h1>
+          <button onClick={() => window.history.back()} className="btn-back">
+            ← Back
+          </button>
+        </div>
         <p>Configure PlexM8 to suit your needs</p>
       </div>
 

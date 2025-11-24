@@ -17,7 +17,9 @@ export default function Playlists() {
 
   const handlePlaylistClick = (playlistKey: string) => {
     setSelectedPlaylist(playlistKey);
-    // TODO: Navigate to playlist detail view
+    // Encode playlist key for URL (handles special characters like /)
+    const encodedKey = encodeURIComponent(playlistKey);
+    navigate(`/playlists/${encodedKey}`);
   };
 
   const getThumbnailUrl = (thumb?: string) => {

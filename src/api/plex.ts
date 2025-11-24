@@ -1,10 +1,11 @@
 import axios from 'axios';
+import { getAuthProxyUrl } from '../utils/backendDetector';
 
 /**
  * Plex Authentication API
  * 
- * Handles authentication with Plex via Netlify Functions backend proxy
- * The backend proxies requests to https://plex.tv/api/v2
+ * Handles authentication with automatic backend detection.
+ * Routes to Netlify Functions (production) or direct Plex API (local dev).
  */
 
 export interface PinResponse {
@@ -73,10 +74,8 @@ class AuthApiClient {
    * Returns a PIN code that the user will claim via Plex auth app
    */
   async createPin(): Promise<PinResponse> {
-    const response = await axios.post(
-      `/.netlify/functions/auth?action=createPin&clientId=${this.clientId}`,
-      null
-    );
+    const url = await getAuthProxyUrl('createPin', this.clientId);
+    const response = await axios.post(url, null);
     return response.data;
   }
 
@@ -85,9 +84,8 @@ class AuthApiClient {
    * Called after user claims the PIN in Plex auth app
    */
   async checkPin(pinId: number): Promise<PinResponse> {
-    const response = await axios.get(
-      `/.netlify/functions/auth?action=checkPin&pinId=${pinId}&clientId=${this.clientId}`
-    );
+    const url = await getAuthProxyUrl('checkPin', this.clientId, String(pinId));
+    const response = await axios.get(url);
     return response.data;
   }
 

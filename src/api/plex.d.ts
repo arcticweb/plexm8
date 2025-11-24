@@ -1,8 +1,8 @@
 /**
  * Plex Authentication API
  *
- * Handles authentication with Plex via Netlify Functions backend proxy
- * The backend proxies requests to https://plex.tv/api/v2
+ * Handles authentication with automatic backend detection.
+ * Routes to Netlify Functions (production) or direct Plex API (local dev).
  */
 export interface PinResponse {
     id: number;

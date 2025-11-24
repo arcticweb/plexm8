@@ -20,6 +20,10 @@ export default defineConfig(({ command, mode }) => {
       sourcemap: mode === 'development',
       rollupOptions: {
         output: {
+          // Use content hash in filenames for better cache busting
+          entryFileNames: 'assets/[name]-[hash].js',
+          chunkFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash].[ext]',
           manualChunks: {
             vendor: ['react', 'react-dom', 'zustand', 'axios'],
           },
