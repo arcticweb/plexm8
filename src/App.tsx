@@ -6,6 +6,7 @@ import Playlists from './pages/Playlists';
 import PlaylistDetail from './pages/PlaylistDetail';
 import Settings from './pages/Settings';
 import InstallPrompt from './components/InstallPrompt';
+import NowPlaying from './components/NowPlaying';
 import { useAuthStore } from './utils/storage';
 import { getBasePath } from './utils/basePath';
 
@@ -33,12 +34,15 @@ function App() {
         {!token || !initialized ? (
           <PlexAuth />
         ) : (
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/playlists" element={<Playlists />} />
-            <Route path="/playlists/:playlistId" element={<PlaylistDetail />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
+          <>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/playlists" element={<Playlists />} />
+              <Route path="/playlists/:playlistId" element={<PlaylistDetail />} />
+              <Route path="/settings" element={<Settings />} />
+            </Routes>
+            <NowPlaying />
+          </>
         )}
       </div>
     </Router>

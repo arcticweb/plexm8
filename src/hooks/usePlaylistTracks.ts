@@ -150,6 +150,10 @@ export function usePlaylistTracks(playlistKey: string | null) {
         playlistItemID: track.playlistItemID,
       }));
 
+      // Calculate total duration if not provided by API
+      const totalDuration = data.MediaContainer.duration || 
+        tracks.reduce((sum, track) => sum + (track.duration || 0), 0);
+
       // Build playlist detail object
       const detail: PlaylistDetail = {
         key: playlistKey,
@@ -158,7 +162,7 @@ export function usePlaylistTracks(playlistKey: string | null) {
         type: data.MediaContainer.title2,
         smart: data.MediaContainer.smart,
         leafCount: data.MediaContainer.leafCount,
-        duration: data.MediaContainer.duration,
+        duration: totalDuration,
         thumb: data.MediaContainer.thumb,
         composite: data.MediaContainer.composite,
         tracks,

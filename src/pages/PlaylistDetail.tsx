@@ -1,9 +1,10 @@
-import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { usePlaylistTracks, formatDuration, formatTotalDuration, getArtworkUrl } from '../hooks/usePlaylistTracks';
+import { usePlaylistTracks, formatDuration, formatTotalDuration, getArtworkUrl, Track } from '../hooks/usePlaylistTracks';
 import { useAuthStore } from '../utils/storage';
 import { useServerStore } from '../utils/serverContext';
 import { selectBestConnection } from '../utils/connectionSelector';
+import { useAudioPlayer } from '../hooks/useAudioPlayer';
+import { useQueueStore, QueueTrack } from '../utils/queueStore';
 
 /**
  * Playlist Detail Component
@@ -24,16 +25,45 @@ export default function PlaylistDetail() {
   const playlistKey = playlistId ? decodeURIComponent(playlistId) : null;
   
   const { playlistDetail, loading, error } = usePlaylistTracks(playlistKey);
-  const [playingTrackKey, setPlayingTrackKey] = useState<string | null>(null);
+  const [, controls] = useAudioPlayer();
+  const { setQueue, getCurrentTrack } = useQueueStore();
 
   const selectedServer = getSelectedServer();
   const serverUrl = selectedServer ? selectBestConnection(selectedServer) : null;
+  const currentTrack = getCurrentTrack();
 
-  const handlePlayTrack = (trackKey: string) => {
-    // Placeholder for audio playback (Phase 2)
-    console.log('Play track:', trackKey);
-    setPlayingTrackKey(trackKey);
-    // TODO: Integrate with audio player hook
+  const buildTrackUrl = (trackKey: string): string => {
+    if (!serverUrl || !token) return '';
+    // Remove leading slash from trackKey if present
+    const cleanKey = trackKey.startsWith('/') ? trackKey.substring(1) : trackKey;
+    return `${serverUrl}/library/metadata/${cleanKey}/file?X-Plex-Token=${token}`;
+  };
+
+  const handlePlayTrack = (trackIndex: number) => {
+    if (!playlistDetail || !serverUrl || !token) return;
+
+    // Build queue from all tracks
+    const queueTracks: QueueTrack[] = playlistDetail.tracks.map((track: Track) => ({
+      key: track.key,
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      thumb: track.thumb ? getArtworkUrl(serverUrl, track.thumb, token) : undefined,
+      duration: track.duration,
+      url: buildTrackUrl(track.key),
+    }));
+
+    // Set queue starting at clicked track
+    setQueue(queueTracks, trackIndex);
+
+    // Load and play the track
+    const selectedTrack = queueTracks[trackIndex];
+    controls.loadTrack(selectedTrack.url);
+    controls.play();
+  };
+
+  const handlePlayAll = () => {
+    handlePlayTrack(0); // Start from first track
   };
 
   const handleBack = () => {
@@ -126,7 +156,7 @@ export default function PlaylistDetail() {
             <div className="playlist-actions">
               <button 
                 className="btn-play-all"
-                onClick={() => playlistDetail.tracks[0] && handlePlayTrack(playlistDetail.tracks[0].key)}
+                onClick={handlePlayAll}
               >
                 ▶ Play All
               </button>
@@ -155,7 +185,7 @@ export default function PlaylistDetail() {
         ) : (
           <div className="track-list-items">
             {playlistDetail.tracks.map((track, index) => {
-              const isPlaying = playingTrackKey === track.key;
+              const isPlaying = currentTrack?.key === track.key;
               const trackArtworkUrl = track.thumb && serverUrl && token
                 ? getArtworkUrl(serverUrl, track.thumb, token)
                 : undefined;
@@ -164,7 +194,7 @@ export default function PlaylistDetail() {
                 <div
                   key={track.playlistItemID || track.key || index}
                   className={`track-item ${isPlaying ? 'playing' : ''}`}
-                  onClick={() => handlePlayTrack(track.key)}
+                  onClick={() => handlePlayTrack(index)}
                 >
                   <span className="track-index">
                     {isPlaying ? '▶' : index + 1}
