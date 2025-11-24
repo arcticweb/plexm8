@@ -96,8 +96,12 @@ function scoreConnection(conn: ConnectionInfo, preferLocal: boolean): number {
   // Protocol preference (HTTPS > HTTP)
   if (conn.protocol === 'https') score += 20;
 
-  // Avoid relay connections (slower)
-  if (!conn.relay) score += 30;
+  // CRITICAL: Avoid relay connections - they cause HTTP 500 for FLAC files
+  // Direct connections work much better for media streaming
+  if (!conn.relay) score += 200; // Increased from 30 to 200 to strongly prefer direct
+  
+  // Penalize relay heavily
+  if (conn.relay) score -= 100;
 
   // Avoid IPv6 for broader compatibility
   if (!conn.IPv6) score += 10;
@@ -134,6 +138,15 @@ export function selectBestConnection(server: PlexServer): string | null {
   scoredConnections.sort((a, b) => b.score - a.score);
 
   const bestConnection = scoredConnections[0].connection;
+  
+  // Debug logging
+  console.log('[Connection] Available connections:', server.connections.length);
+  console.log('[Connection] Prefer local:', preferLocal);
+  console.log('[Connection] Selected:', bestConnection.uri, '(relay:', bestConnection.relay, ')');
+  if (bestConnection.relay) {
+    console.warn('[Connection] ⚠️ Using relay connection - may cause issues with FLAC files');
+    console.warn('[Connection] Consider enabling Remote Access or port forwarding for better performance');
+  }
 
   return bestConnection.uri;
 }

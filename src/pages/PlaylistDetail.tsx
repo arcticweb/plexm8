@@ -6,6 +6,7 @@ import { useServerStore } from '../utils/serverContext';
 import { selectBestConnection } from '../utils/connectionSelector';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useQueueStore, QueueTrack } from '../utils/queueStore';
+import TrackInfoModal from '../components/TrackInfoModal';
 
 /**
  * Playlist Detail Component
@@ -36,6 +37,9 @@ export default function PlaylistDetail() {
   const selectedServer = getSelectedServer();
   const serverUrl = selectedServer ? selectBestConnection(selectedServer) : null;
   const currentTrack = getCurrentTrack();
+
+  // Track info modal state
+  const [selectedTrackForInfo, setSelectedTrackForInfo] = useState<Track | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -414,11 +418,11 @@ export default function PlaylistDetail() {
                       className="btn-track-action"
                       onClick={(e) => {
                         e.stopPropagation();
-                        console.log('More options:', track.key);
+                        setSelectedTrackForInfo(track);
                       }}
-                      title="More options"
+                      title="Get Info"
                     >
-                      ⋯
+                      ℹ️
                     </button>
                   </div>
                 </div>
@@ -478,6 +482,16 @@ export default function PlaylistDetail() {
             </button>
           )}
         </div>
+      )}
+
+      {/* Track Info Modal */}
+      {selectedTrackForInfo && serverUrl && token && (
+        <TrackInfoModal
+          track={selectedTrackForInfo}
+          serverUrl={serverUrl}
+          token={token}
+          onClose={() => setSelectedTrackForInfo(null)}
+        />
       )}
     </div>
   );
