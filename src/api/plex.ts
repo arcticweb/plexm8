@@ -74,8 +74,16 @@ class AuthApiClient {
    * Returns a PIN code that the user will claim via Plex auth app
    */
   async createPin(): Promise<PinResponse> {
-    const url = await getAuthProxyUrl('createPin', this.clientId);
-    const response = await axios.post(url, null);
+    const { url, isDirect } = await getAuthProxyUrl('createPin', this.clientId);
+    
+    // Add required Plex headers for direct API calls
+    const headers = isDirect ? {
+      'X-Plex-Product': 'PlexM8',
+      'X-Plex-Client-Identifier': this.clientId,
+      'Accept': 'application/json',
+    } : {};
+    
+    const response = await axios.post(url, null, { headers });
     return response.data;
   }
 
@@ -84,8 +92,16 @@ class AuthApiClient {
    * Called after user claims the PIN in Plex auth app
    */
   async checkPin(pinId: number): Promise<PinResponse> {
-    const url = await getAuthProxyUrl('checkPin', this.clientId, String(pinId));
-    const response = await axios.get(url);
+    const { url, isDirect } = await getAuthProxyUrl('checkPin', this.clientId, String(pinId));
+    
+    // Add required Plex headers for direct API calls
+    const headers = isDirect ? {
+      'X-Plex-Product': 'PlexM8',
+      'X-Plex-Client-Identifier': this.clientId,
+      'Accept': 'application/json',
+    } : {};
+    
+    const response = await axios.get(url, { headers });
     return response.data;
   }
 

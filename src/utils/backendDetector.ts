@@ -135,30 +135,37 @@ export async function getPlaylistsProxyUrl(
 /**
  * Get the appropriate proxy URL for authentication endpoint
  */
-export async function getAuthProxyUrl(action: 'createPin' | 'checkPin', clientId: string, pinId?: string): Promise<string> {
+export async function getAuthProxyUrl(action: 'createPin' | 'checkPin', clientId: string, pinId?: string): Promise<{ url: string; isDirect: boolean }> {
   const backend = await detectBackend();
 
   switch (backend.type) {
     case 'netlify':
       // Netlify Functions auth proxy
-      return pinId
-        ? `${backend.baseUrl}/auth?action=${action}&clientId=${clientId}&pinId=${pinId}`
-        : `${backend.baseUrl}/auth?action=${action}&clientId=${clientId}`;
+      return {
+        url: pinId
+          ? `${backend.baseUrl}/auth?action=${action}&clientId=${clientId}&pinId=${pinId}`
+          : `${backend.baseUrl}/auth?action=${action}&clientId=${clientId}`,
+        isDirect: false,
+      };
 
     case 'local-python':
       // Local Python backend auth
-      return pinId
-        ? `${backend.baseUrl}/auth/${action}?clientId=${clientId}&pinId=${pinId}`
-        : `${backend.baseUrl}/auth/${action}?clientId=${clientId}`;
+      return {
+        url: pinId
+          ? `${backend.baseUrl}/auth/${action}?clientId=${clientId}&pinId=${pinId}`
+          : `${backend.baseUrl}/auth/${action}?clientId=${clientId}`,
+        isDirect: false,
+      };
 
     case 'direct':
       // Direct Plex API calls (no proxy needed for auth)
       const plexApiBase = 'https://plex.tv/api/v2';
-      if (action === 'createPin') {
-        return `${plexApiBase}/pins?strong=true`;
-      } else {
-        return `${plexApiBase}/pins/${pinId}`;
-      }
+      return {
+        url: action === 'createPin' 
+          ? `${plexApiBase}/pins?strong=true`
+          : `${plexApiBase}/pins/${pinId}`,
+        isDirect: true,
+      };
 
     default:
       throw new Error('No backend available for authentication');

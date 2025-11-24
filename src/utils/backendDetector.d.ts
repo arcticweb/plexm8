@@ -30,7 +30,10 @@ export declare function getPlaylistsProxyUrl(serverUrl: string, token: string, c
 /**
  * Get the appropriate proxy URL for authentication endpoint
  */
-export declare function getAuthProxyUrl(action: 'createPin' | 'checkPin', clientId: string, pinId?: string): Promise<string>;
+export declare function getAuthProxyUrl(action: 'createPin' | 'checkPin', clientId: string, pinId?: string): Promise<{
+    url: string;
+    isDirect: boolean;
+}>;
 export declare function getCachedBackend(): Promise<BackendConfig>;
 /**
  * Force re-detection of backend
