@@ -28,7 +28,13 @@ function App() {
   }
 
   return (
-    <Router basename={getBasePath()}>
+    <Router 
+      basename={getBasePath()}
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <div className="app">
         <InstallPrompt />
         {!token || !initialized ? (

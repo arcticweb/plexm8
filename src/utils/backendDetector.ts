@@ -136,34 +136,42 @@ export async function getPlaylistsProxyUrl(
  * Get the appropriate proxy URL for authentication endpoint
  */
 export async function getAuthProxyUrl(action: 'createPin' | 'checkPin', clientId: string, pinId?: string): Promise<{ url: string; isDirect: boolean }> {
-  const backend = await detectBackend();
+  const backend = await getCachedBackend();
+  
+  console.log('[Auth] Backend detected:', backend.type, 'Action:', action);
 
   switch (backend.type) {
     case 'netlify':
       // Netlify Functions auth proxy
+      const netlifyUrl = pinId
+        ? `${backend.baseUrl}/auth?action=${action}&clientId=${clientId}&pinId=${pinId}`
+        : `${backend.baseUrl}/auth?action=${action}&clientId=${clientId}`;
+      console.log('[Auth] Using Netlify proxy:', netlifyUrl);
       return {
-        url: pinId
-          ? `${backend.baseUrl}/auth?action=${action}&clientId=${clientId}&pinId=${pinId}`
-          : `${backend.baseUrl}/auth?action=${action}&clientId=${clientId}`,
+        url: netlifyUrl,
         isDirect: false,
       };
 
     case 'local-python':
       // Local Python backend auth
+      const pythonUrl = pinId
+        ? `${backend.baseUrl}/auth/${action}?clientId=${clientId}&pinId=${pinId}`
+        : `${backend.baseUrl}/auth/${action}?clientId=${clientId}`;
+      console.log('[Auth] Using Python backend:', pythonUrl);
       return {
-        url: pinId
-          ? `${backend.baseUrl}/auth/${action}?clientId=${clientId}&pinId=${pinId}`
-          : `${backend.baseUrl}/auth/${action}?clientId=${clientId}`,
+        url: pythonUrl,
         isDirect: false,
       };
 
     case 'direct':
       // Direct Plex API calls (no proxy needed for auth)
       const plexApiBase = 'https://plex.tv/api/v2';
+      const directUrl = action === 'createPin' 
+        ? `${plexApiBase}/pins?strong=true`
+        : `${plexApiBase}/pins/${pinId}`;
+      console.log('[Auth] Using direct Plex API:', directUrl);
       return {
-        url: action === 'createPin' 
-          ? `${plexApiBase}/pins?strong=true`
-          : `${plexApiBase}/pins/${pinId}`,
+        url: directUrl,
         isDirect: true,
       };
 
@@ -181,7 +189,7 @@ let cachedBackend: BackendConfig | null = null;
 export async function getCachedBackend(): Promise<BackendConfig> {
   if (!cachedBackend) {
     cachedBackend = await detectBackend();
-    console.log('Backend detected:', cachedBackend);
+    console.log('[Backend] Detected and cached:', cachedBackend.type, '| Available:', cachedBackend.available, '| Base URL:', cachedBackend.baseUrl || '(none - direct mode)');
   }
   return cachedBackend;
 }
