@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useAuthStore, getOrCreateClientId } from '../utils/storage';
 import { useServerStore } from '../utils/serverContext';
 import axios from 'axios';
-import { PLEX_CONFIG, fillEndpointParams, buildPlexHeaders } from '../config/plex.config';
 
 export interface Playlist {
   key: string;
@@ -79,16 +78,20 @@ export function usePlaylists() {
         return;
       }
 
-      // Now fetch playlists from the server
-      const playlistsEndpoint = fillEndpointParams(PLEX_CONFIG.playlists.list, {});
-      const playlistsResponse = await axios.get(
-        `${serverUrl}${playlistsEndpoint}`,
-        {
-          headers: buildPlexHeaders(selectedServer.accessToken || token, clientId),
-        }
-      );
+      // Route through Netlify Function proxy to bypass CORS restrictions
+      // Encode serverUrl as base64 for safe query parameter passing
+      const encodedServerUrl = Buffer.from(serverUrl).toString('base64');
 
-      const fetchedPlaylists = (playlistsResponse.data as PlexPlaylistResponse)
+      const proxyResponse = await axios.get('/.netlify/functions/plex-proxy', {
+        params: {
+          endpoint: 'playlists',
+          serverUrl: encodedServerUrl,
+          token: selectedServer.accessToken || token,
+          clientId,
+        },
+      });
+
+      const fetchedPlaylists = (proxyResponse.data as PlexPlaylistResponse)
         .MediaContainer?.Metadata?.map((p) => ({
           key: p.key || '',
           title: p.title || 'Untitled',
