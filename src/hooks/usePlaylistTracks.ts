@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore, getOrCreateClientId } from '../utils/storage';
 import { useServerStore } from '../utils/serverContext';
 import { selectBestConnection } from '../utils/connectionSelector';
-import { getPlaylistsProxyUrl } from '../utils/backendDetector';
-import axios from 'axios';
+import { plexFetch } from '../utils/plexFetch';
 
 /**
  * Track metadata from Plex
@@ -148,12 +147,12 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
         console.log(`[Playlist] Large playlist (${trackCount} tracks) - using batched API loading`);
         
         // Fetch first batch immediately for instant UI
-        const firstBatchUrl = `${serverUrl}${endpointPath}?X-Plex-Token=${authToken}&X-Plex-Container-Start=0&X-Plex-Container-Size=${BATCH_SIZE}`;
+        const firstBatchUrl = `${serverUrl}${endpointPath}?X-Plex-Container-Start=0&X-Plex-Container-Size=${BATCH_SIZE}`;
         const startTime = Date.now();
-        const firstResponse = await axios.get(firstBatchUrl, {
-          headers: { 'Accept': 'application/json' },
-        });
-        const firstData = firstResponse.data as PlexPlaylistDetailResponse;
+        const firstData = await plexFetch(firstBatchUrl, {
+          token: authToken,
+          clientId,
+        }) as PlexPlaylistDetailResponse;
 
         if (!firstData.MediaContainer) {
           setError('Invalid response from server');
@@ -211,12 +210,12 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
         const totalBatches = Math.ceil(trackCount / BATCH_SIZE);
         for (let batchIndex = 1; batchIndex < totalBatches; batchIndex++) {
           const offset = batchIndex * BATCH_SIZE;
-          const batchUrl = `${serverUrl}${endpointPath}?X-Plex-Token=${authToken}&X-Plex-Container-Start=${offset}&X-Plex-Container-Size=${BATCH_SIZE}`;
+          const batchUrl = `${serverUrl}${endpointPath}?X-Plex-Container-Start=${offset}&X-Plex-Container-Size=${BATCH_SIZE}`;
           
-          const batchResponse = await axios.get(batchUrl, {
-            headers: { 'Accept': 'application/json' },
-          });
-          const batchData = batchResponse.data as PlexPlaylistDetailResponse;
+          const batchData = await plexFetch(batchUrl, {
+            token: authToken,
+            clientId,
+          }) as PlexPlaylistDetailResponse;
 
           const batchTracks: Track[] = (batchData.MediaContainer?.Metadata || []).map((track) => ({
             key: track.ratingKey || track.key || '',
@@ -250,26 +249,13 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
         console.log(`[Playlist] Completed loading all ${allTracks.length} tracks in ${Date.now() - startTime}ms`);
         setLoadingProgress(null);
       } else {
-        // Small playlist - load all at once (existing behavior)
-        let data: PlexPlaylistDetailResponse;
+        // Small playlist - load all at once
+        const directUrl = `${serverUrl}${endpointPath}`;
         
-        try {
-          const proxyUrl = await getPlaylistsProxyUrl(
-            serverUrl,
-            authToken,
-            clientId,
-            endpointPath
-          );
-          const response = await axios.get(proxyUrl);
-          data = response.data as PlexPlaylistDetailResponse;
-        } catch (proxyError: any) {
-          console.warn('[Playlist] Proxy failed, using direct connection:', proxyError.message);
-          const directUrl = `${serverUrl}${endpointPath}?X-Plex-Token=${authToken}`;
-          const directResponse = await axios.get(directUrl, {
-            headers: { 'Accept': 'application/json' },
-          });
-          data = directResponse.data as PlexPlaylistDetailResponse;
-        }
+        const data = await plexFetch(directUrl, {
+          token: authToken,
+          clientId,
+        }) as PlexPlaylistDetailResponse;
 
         if (!data.MediaContainer) {
           setError('Invalid response from server');

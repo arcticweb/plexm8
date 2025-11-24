@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore, getOrCreateClientId } from '../utils/storage';
 import { useServerStore } from '../utils/serverContext';
 import { selectBestConnection } from '../utils/connectionSelector';
-import { getPlaylistsProxyUrl } from '../utils/backendDetector';
-import axios from 'axios';
+import { plexFetch } from '../utils/plexFetch';
 
 export interface Playlist {
   key: string;
@@ -73,17 +72,18 @@ export function usePlaylists() {
         return;
       }
 
-      // Automatically detect and use the best available backend
-      // (Netlify Functions in production, Python backend in local dev, or direct)
-      const proxyUrl = await getPlaylistsProxyUrl(
-        serverUrl,
-        selectedServer.accessToken || token,
-        clientId
-      );
+      // Use direct fetch with custom Plex headers to bypass CORS
+      // Same approach as FLAC playback - works from browser
+      const playlistsUrl = `${serverUrl}/playlists`;
+      
+      console.log('[Playlists] Fetching directly with custom headers:', playlistsUrl);
+      
+      const data = await plexFetch(playlistsUrl, {
+        token: selectedServer.accessToken || token,
+        clientId,
+      }) as PlexPlaylistResponse;
 
-      const proxyResponse = await axios.get(proxyUrl);
-
-      const fetchedPlaylists = (proxyResponse.data as PlexPlaylistResponse)
+      const fetchedPlaylists = (data as PlexPlaylistResponse)
         .MediaContainer?.Metadata?.map((p) => ({
           key: p.key || '',
           title: p.title || 'Untitled',
@@ -99,7 +99,20 @@ export function usePlaylists() {
 
       setPlaylists(fetchedPlaylists);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch playlists';
+      let message = err instanceof Error ? err.message : 'Failed to fetch playlists';
+      
+      // Provide helpful error messages for common issues
+      if (err instanceof Error) {
+        if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+          message = 'Network error: Cannot connect to Plex server. ' +
+                   'Check your network connection and Plex server status.';
+        } else if (message.includes('timeout')) {
+          message = 'Connection timeout: Plex server is not responding.';
+        } else if (message.includes('401')) {
+          message = 'Authentication failed: Invalid Plex token. Please log in again.';
+        }
+      }
+      
       console.error('Error fetching playlists:', err);
       setError(message);
     } finally {

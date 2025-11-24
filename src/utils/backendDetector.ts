@@ -52,26 +52,33 @@ async function checkLocalPythonBackend(): Promise<boolean> {
  * Returns configuration for the best available option
  */
 export async function detectBackend(): Promise<BackendConfig> {
-  // TEMPORARY FIX: Force direct mode to bypass Netlify proxy timeouts
-  // The Netlify Functions can't reach the Plex server (network/firewall issue)
-  // Browser can reach it directly, so use direct mode
-  return {
-    type: 'direct',
-    baseUrl: '',
-    available: false,
-  };
-  
   // Check if we're on Netlify (production)
-  // DISABLED: Netlify Functions timing out (ETIMEDOUT)
-  /*
   if (window.location.hostname.includes('netlify.app')) {
+    // Try Netlify Functions first, but with quick timeout
+    try {
+      const response = await fetch('/.netlify/functions/plex-proxy?healthcheck=true', {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000), // 3 second timeout
+      });
+      if (response.ok || response.status !== 404) {
+        return {
+          type: 'netlify',
+          baseUrl: '/.netlify/functions',
+          available: true,
+        };
+      }
+    } catch (error) {
+      console.warn('[Backend] Netlify Functions unavailable, using direct mode');
+    }
+    
+    // Netlify Functions not responding - use direct mode
+    // Note: This may cause CORS issues, but it's better than nothing
     return {
-      type: 'netlify',
-      baseUrl: '/.netlify/functions',
-      available: true,
+      type: 'direct',
+      baseUrl: '',
+      available: false,
     };
   }
-  */
 
   // In local development, check what's available
   const [netlifyAvailable, pythonAvailable] = await Promise.all([
@@ -135,9 +142,10 @@ export async function getPlaylistsProxyUrl(
 
     case 'direct':
       // Direct connection (no proxy)
-      // This will likely fail due to CORS, but we'll try anyway
+      // Add token to URL and hope CORS works
       console.warn('No proxy available, attempting direct connection (may fail due to CORS)');
-      return fullUrl;
+      const separator = fullUrl.includes('?') ? '&' : '?';
+      return `${fullUrl}${separator}X-Plex-Token=${token}`;
 
     default:
       throw new Error('No backend available for playlist requests');
