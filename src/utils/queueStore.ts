@@ -80,37 +80,22 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
- * Build playback URL for track (used for lazy URL building in large playlists)
- * Returns existing URL if already built, otherwise constructs from Media parts
+ * Ensure track has a URL (legacy function, mostly unused now)
+ * 
+ * URLs are now built on-demand in NowPlaying component where we have
+ * proper access to serverUrl and token via React context.
+ * 
+ * This function just returns the existing URL or empty string.
  */
 function ensureTrackUrl(track: QueueTrack): string {
-  // If URL already exists, return it
+  // Return existing URL (should be built by NowPlaying before playing)
   if (track.url && track.url.trim() !== '') {
     return track.url;
   }
   
-  // Build URL from Media parts
-  const mediaPart = track.Media?.[0]?.Part?.[0];
-  if (!mediaPart?.key) {
-    console.error('[Queue] Cannot build URL - no media part key for track:', track.title);
-    return '';
-  }
-  
-  // Get server URL and token from localStorage
-  const serverUrl = localStorage.getItem('serverUrl');
-  const token = localStorage.getItem('token');
-  
-  if (!serverUrl || !token) {
-    console.error('[Queue] Cannot build URL - missing serverUrl or token');
-    return '';
-  }
-  
-  const url = `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`;
-  
-  // Cache the URL in the track object
-  track.url = url;
-  
-  return url;
+  // No URL available - this is expected for lazy-loaded tracks
+  // URL will be built in NowPlaying right before playing
+  return '';
 }
 
 /**

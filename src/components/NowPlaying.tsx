@@ -51,6 +51,25 @@ export default function NowPlaying() {
 
   const currentTrack = getCurrentTrack();
   
+  // Helper function to build track URL on-demand
+  const buildTrackUrl = (track: any): string => {
+    if (!serverUrl || !token) return '';
+    
+    // If URL already exists, use it
+    if (track.url && track.url.trim() !== '') {
+      return track.url;
+    }
+    
+    // Build URL from Media parts
+    const mediaPart = track.Media?.[0]?.Part?.[0];
+    if (mediaPart?.key) {
+      return `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`;
+    }
+    
+    console.error('[NowPlaying] Cannot build URL for track:', track.title);
+    return '';
+  };
+  
   // Build full artwork URL from relative path
   const artworkUrl = currentTrack?.thumb && serverUrl && token
     ? getArtworkUrl(serverUrl, currentTrack.thumb, token)
@@ -68,8 +87,11 @@ export default function NowPlaying() {
       if (hasNext()) {
         const nextTrack = playNext();
         if (nextTrack) {
-          controls.loadTrack(nextTrack.url);
-          controls.play();
+          const url = buildTrackUrl(nextTrack);
+          if (url) {
+            controls.loadTrack(url);
+            controls.play();
+          }
         }
       }
     }
@@ -83,8 +105,11 @@ export default function NowPlaying() {
       if (hasNext()) {
         const nextTrack = playNext();
         if (nextTrack) {
-          controls.loadTrack(nextTrack.url);
-          controls.play();
+          const url = buildTrackUrl(nextTrack);
+          if (url) {
+            controls.loadTrack(url);
+            controls.play();
+          }
         }
       }
     }
@@ -99,8 +124,11 @@ export default function NowPlaying() {
     controls.pause();
     const nextTrack = playNext();
     if (nextTrack) {
-      controls.loadTrack(nextTrack.url);
-      controls.play();
+      const url = buildTrackUrl(nextTrack);
+      if (url) {
+        controls.loadTrack(url);
+        controls.play();
+      }
     }
   };
 
@@ -114,8 +142,11 @@ export default function NowPlaying() {
       controls.pause();
       const prevTrack = playPrevious();
       if (prevTrack) {
-        controls.loadTrack(prevTrack.url);
-        controls.play();
+        const url = buildTrackUrl(prevTrack);
+        if (url) {
+          controls.loadTrack(url);
+          controls.play();
+        }
       }
     }
   };

@@ -135,15 +135,6 @@ export function selectBestConnection(server: PlexServer): string | null {
 
   const bestConnection = scoredConnections[0].connection;
 
-  console.log('Connection selection:', {
-    environment: preferLocal ? 'local' : 'production',
-    available: server.connections.length,
-    selected: bestConnection.uri,
-    isLocal: bestConnection.local,
-    isPrivate: isPrivateIP(bestConnection.address),
-    protocol: bestConnection.protocol,
-  });
-
   return bestConnection.uri;
 }
 
