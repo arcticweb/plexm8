@@ -88,12 +88,10 @@ export default function PlaylistDetail() {
     
     if (mediaPart?.key) {
       // Direct file streaming (like python-plexapi does)
-      console.log('[Track URL] Using direct media part:', mediaPart.key);
       return `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`;
     }
     
     // Fallback: Use Plex universal music transcode endpoint
-    console.log('[Track URL] Using transcode fallback for track:', track.key);
     const ratingKey = track.key.startsWith('/library/metadata/') 
       ? track.key.replace('/library/metadata/', '') 
       : track.key;
@@ -120,44 +118,28 @@ export default function PlaylistDetail() {
   const handlePlayTrack = (trackIndex: number) => {
     if (!serverUrl || !token) return;
 
-    console.log(`[Play] Building queue for ${filteredTracks.length} tracks, starting at index ${trackIndex}`);
-    
-    // For large playlists, store minimal data and build URLs on-demand
-    // This prevents localStorage quota errors
-    const queueTracks: QueueTrack[] = filteredTracks.map((track: Track, idx: number) => {
-      const url = buildTrackUrl(track);
-      
-      // Log the first track and selected track for debugging
-      if (idx === 0 || idx === trackIndex) {
-        console.log(`[Play] Track ${idx}:`, {
-          title: track.title,
-          hasMedia: !!track.Media,
-          mediaPart: track.Media?.[0]?.Part?.[0]?.key,
-          url: url
-        });
-      }
-      
-      return {
-        key: track.key,
-        title: track.title,
-        artist: track.artist,
-        album: track.album,
-        // Store relative thumb path, not full URL (saves space)
-        thumb: track.thumb,
-        duration: track.duration,
-        url: url,
-        // Store Media parts for potential URL rebuilding
-        Media: track.Media,
-        ratingKey: track.key.replace('/library/metadata/', ''),
-      };
-    });
+    // ALWAYS use lazy URL building - don't build URLs until track is about to play
+    // This works for playlists of any size and supports shuffle/random perfectly
+    const queueTracks: QueueTrack[] = filteredTracks.map((track: Track) => ({
+      key: track.key,
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      thumb: track.thumb,
+      duration: track.duration,
+      // Empty URL - will be built on-demand by queueStore when track plays
+      url: '',
+      Media: track.Media,
+      ratingKey: track.key.replace('/library/metadata/', ''),
+    }));
 
-    // Set queue starting at clicked track
+    // Set queue and play selected track
     setQueue(queueTracks, trackIndex);
-
-    // Load and play the track
+    
+    // Build URL only for the track we're about to play
     const selectedTrack = queueTracks[trackIndex];
-    console.log('[Play] Loading track:', selectedTrack.title, 'URL:', selectedTrack.url);
+    selectedTrack.url = buildTrackUrl(filteredTracks[trackIndex]);
+    
     controls.loadTrack(selectedTrack.url);
     controls.play();
   };

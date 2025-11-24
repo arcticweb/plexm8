@@ -80,6 +80,40 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
+ * Build playback URL for track (used for lazy URL building in large playlists)
+ * Returns existing URL if already built, otherwise constructs from Media parts
+ */
+function ensureTrackUrl(track: QueueTrack): string {
+  // If URL already exists, return it
+  if (track.url && track.url.trim() !== '') {
+    return track.url;
+  }
+  
+  // Build URL from Media parts
+  const mediaPart = track.Media?.[0]?.Part?.[0];
+  if (!mediaPart?.key) {
+    console.error('[Queue] Cannot build URL - no media part key for track:', track.title);
+    return '';
+  }
+  
+  // Get server URL and token from localStorage
+  const serverUrl = localStorage.getItem('serverUrl');
+  const token = localStorage.getItem('token');
+  
+  if (!serverUrl || !token) {
+    console.error('[Queue] Cannot build URL - missing serverUrl or token');
+    return '';
+  }
+  
+  const url = `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`;
+  
+  // Cache the URL in the track object
+  track.url = url;
+  
+  return url;
+}
+
+/**
  * Playback queue store
  * 
  * Manages the playback queue, history, shuffle, and repeat modes.
@@ -215,7 +249,12 @@ export const useQueueStore = create<QueueState>()(
         }
         
         set({ currentIndex: nextIndex });
-        return effectiveQueue[nextIndex];
+        
+        // Build URL lazily if needed (for large playlists)
+        const nextTrack = effectiveQueue[nextIndex];
+        ensureTrackUrl(nextTrack);
+        
+        return nextTrack;
       },
 
       /**
@@ -226,6 +265,12 @@ export const useQueueStore = create<QueueState>()(
         const effectiveQueue = state.shuffle ? state.shuffledQueue : state.queue;
         
         if (effectiveQueue.length === 0) return null;
+        
+        // Build URL lazily for current track if needed
+        const currentTrack = state.getCurrentTrack();
+        if (currentTrack) {
+          ensureTrackUrl(currentTrack);
+        }
         
         // If we've played more than 3 seconds, restart current track
         // (This logic should be handled by the audio player component)
@@ -241,7 +286,12 @@ export const useQueueStore = create<QueueState>()(
         }
         
         set({ currentIndex: prevIndex });
-        return effectiveQueue[prevIndex];
+        
+        // Build URL lazily if needed
+        const prevTrack = effectiveQueue[prevIndex];
+        ensureTrackUrl(prevTrack);
+        
+        return prevTrack;
       },
 
       /**
@@ -260,7 +310,12 @@ export const useQueueStore = create<QueueState>()(
         }
         
         set({ currentIndex: index });
-        return effectiveQueue[index];
+        
+        // Build URL lazily if needed
+        const track = effectiveQueue[index];
+        ensureTrackUrl(track);
+        
+        return track;
       },
 
       /**
@@ -297,7 +352,12 @@ export const useQueueStore = create<QueueState>()(
         if (state.currentIndex < 0 || state.currentIndex >= effectiveQueue.length) {
           return null;
         }
-        return effectiveQueue[state.currentIndex];
+        
+        const track = effectiveQueue[state.currentIndex];
+        // Build URL lazily if needed
+        ensureTrackUrl(track);
+        
+        return track;
       },
 
       /**
