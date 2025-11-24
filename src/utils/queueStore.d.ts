@@ -70,41 +70,13 @@ interface QueueState {
  */
 export declare const useQueueStore: import("zustand").UseBoundStore<Omit<import("zustand").StoreApi<QueueState>, "persist"> & {
     persist: {
-        setOptions: (options: Partial<import("zustand/middleware").PersistOptions<QueueState, {
-            queue: QueueTrack[];
-            currentIndex: number;
-            shuffle: boolean;
-            repeat: RepeatMode;
-            _originalQueueSize: number;
-            _originalCurrentIndex: number;
-        } | {
-            queue: QueueTrack[];
-            currentIndex: number;
-            shuffle: boolean;
-            repeat: RepeatMode;
-            _originalQueueSize?: undefined;
-            _originalCurrentIndex?: undefined;
-        }>>) => void;
+        setOptions: (options: Partial<import("zustand/middleware").PersistOptions<QueueState, any>>) => void;
         clearStorage: () => void;
         rehydrate: () => Promise<void> | void;
         hasHydrated: () => boolean;
         onHydrate: (fn: (state: QueueState) => void) => () => void;
         onFinishHydration: (fn: (state: QueueState) => void) => () => void;
-        getOptions: () => Partial<import("zustand/middleware").PersistOptions<QueueState, {
-            queue: QueueTrack[];
-            currentIndex: number;
-            shuffle: boolean;
-            repeat: RepeatMode;
-            _originalQueueSize: number;
-            _originalCurrentIndex: number;
-        } | {
-            queue: QueueTrack[];
-            currentIndex: number;
-            shuffle: boolean;
-            repeat: RepeatMode;
-            _originalQueueSize?: undefined;
-            _originalCurrentIndex?: undefined;
-        }>>;
+        getOptions: () => Partial<import("zustand/middleware").PersistOptions<QueueState, any>>;
     };
 }>;
 export {};

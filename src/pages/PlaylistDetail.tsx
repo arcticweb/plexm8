@@ -83,18 +83,17 @@ export default function PlaylistDetail() {
   const buildTrackUrl = (track: Track): string => {
     if (!serverUrl || !token) return '';
     
-    // Replicate python-plexapi's Audio.url() method
     // Try to get the direct media part key first (best quality, no transcoding)
     const mediaPart = track.Media?.[0]?.Part?.[0];
     
     if (mediaPart?.key) {
       // Direct file streaming (like python-plexapi does)
-      // This is the highest quality - no transcoding
+      console.log('[Track URL] Using direct media part:', mediaPart.key);
       return `${serverUrl}${mediaPart.key}?X-Plex-Token=${token}`;
     }
     
     // Fallback: Use Plex universal music transcode endpoint
-    // This is what Plex Web uses when direct play isn't available
+    console.log('[Track URL] Using transcode fallback for track:', track.key);
     const ratingKey = track.key.startsWith('/library/metadata/') 
       ? track.key.replace('/library/metadata/', '') 
       : track.key;
@@ -121,10 +120,22 @@ export default function PlaylistDetail() {
   const handlePlayTrack = (trackIndex: number) => {
     if (!serverUrl || !token) return;
 
+    console.log(`[Play] Building queue for ${filteredTracks.length} tracks, starting at index ${trackIndex}`);
+    
     // For large playlists, store minimal data and build URLs on-demand
     // This prevents localStorage quota errors
-    const queueTracks: QueueTrack[] = filteredTracks.map((track: Track) => {
+    const queueTracks: QueueTrack[] = filteredTracks.map((track: Track, idx: number) => {
       const url = buildTrackUrl(track);
+      
+      // Log the first track and selected track for debugging
+      if (idx === 0 || idx === trackIndex) {
+        console.log(`[Play] Track ${idx}:`, {
+          title: track.title,
+          hasMedia: !!track.Media,
+          mediaPart: track.Media?.[0]?.Part?.[0]?.key,
+          url: url
+        });
+      }
       
       return {
         key: track.key,
@@ -146,6 +157,7 @@ export default function PlaylistDetail() {
 
     // Load and play the track
     const selectedTrack = queueTracks[trackIndex];
+    console.log('[Play] Loading track:', selectedTrack.title, 'URL:', selectedTrack.url);
     controls.loadTrack(selectedTrack.url);
     controls.play();
   };

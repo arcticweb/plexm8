@@ -364,6 +364,15 @@ export const useQueueStore = create<QueueState>()(
     {
       name: 'plexm8-queue',
       version: 2,
+      // Migration from v1 to v2 (windowed queue support)
+      migrate: (persistedState: any, version: number) => {
+        if (version === 1) {
+          // V1 had full queue persistence, V2 uses windowed approach
+          // Just return the state as-is, new logic will handle it
+          return persistedState;
+        }
+        return persistedState;
+      },
       // Selective persistence to avoid localStorage quota exceeded errors
       partialize: (state) => {
         // For large queues (>100 tracks), only persist minimal data
