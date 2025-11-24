@@ -53,7 +53,7 @@ async function handleGetPlaylists(event: HandlerEvent) {
 
     const response = await axios.get(plexUrl, {
       headers: getPlexHeaders(token, clientId),
-      timeout: 10000,
+      timeout: 30000,
     });
 
     return addCorsHeaders(200, response.data);
@@ -100,7 +100,7 @@ async function handleRateTrack(event: HandlerEvent) {
 
     const response = await axios.put(plexUrl, null, {
       headers: getPlexHeaders(token, clientId),
-      timeout: 10000,
+      timeout: 30000,
     });
 
     return addCorsHeaders(200, { 

@@ -49,7 +49,7 @@ export const PLEX_CONFIG = {
   defaults: {
     contentType: 'application/json',
     accept: 'application/json',
-    timeout: 10000,
+    timeout: 30000,
   },
 } as const;
 

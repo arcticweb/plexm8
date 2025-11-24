@@ -98,7 +98,7 @@ export const PLEX_CONFIG = {
     contentType: 'application/json',
     accept: 'application/json',
     // Request timeout in milliseconds
-    timeout: 10000,
+    timeout: 30000,
   },
 
   // Rate limiting / polling intervals (in milliseconds)
