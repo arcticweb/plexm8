@@ -148,7 +148,7 @@ export default function NowPlaying() {
         logger.warn('NowPlaying', `Cannot load track: no URL for ${currentTrack.title}`);
       }
     }
-  }, [currentTrack?.ratingKey, serverUrl, token, controls, buildTrackUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentTrack?.ratingKey]); // Only depend on track change, not functions
 
   // Auto-play next track when current track ends
   useEffect(() => {

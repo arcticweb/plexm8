@@ -129,8 +129,12 @@ export function selectBestConnection(server: PlexServer): string | null {
 
   const preferLocal = isLocalDevelopment();
   
+  // CRITICAL: Filter out relay connections if ANY non-relay connection exists
+  const nonRelayConnections = server.connections.filter(conn => !conn.relay);
+  const connectionsToScore = nonRelayConnections.length > 0 ? nonRelayConnections : server.connections;
+  
   // Score all connections
-  const scoredConnections = server.connections.map((conn) => ({
+  const scoredConnections = connectionsToScore.map((conn) => ({
     connection: conn,
     score: scoreConnection(conn, preferLocal),
   }));
@@ -141,13 +145,13 @@ export function selectBestConnection(server: PlexServer): string | null {
   const bestConnection = scoredConnections[0].connection;
   
   // Debug logging (only visible at DEBUG level)
-  logger.debug('Connection', `Available: ${server.connections.length}, Prefer local: ${preferLocal}`);
+  logger.debug('Connection', `Available: ${server.connections.length} (${nonRelayConnections.length} non-relay), Prefer local: ${preferLocal}`);
   logger.debug('Connection', `Selected: ${bestConnection.uri} (relay: ${bestConnection.relay})`);
   
   // Warn about relay connections (visible at WARN level)
   if (bestConnection.relay) {
-    logger.warn('Connection', '⚠️ Using relay connection - may cause issues with FLAC files');
-    logger.warn('Connection', 'Consider enabling Remote Access or port forwarding for better performance');
+    logger.warn('Connection', '⚠️ Using relay connection - direct connection not available');
+    logger.warn('Connection', 'Relay connections may timeout or fail - consider enabling Remote Access or port forwarding');
   }
 
   return bestConnection.uri;
