@@ -2,7 +2,7 @@
 // Provides offline support and caching strategies
 
 // Increment this version whenever the service worker changes
-const CACHE_NAME = 'plexm8-v2';
+const CACHE_NAME = 'plexm8-v3'; // Bumped to clear corrupted cache
 
 // Get base path from the service worker's scope
 const getBasePath = () => {
@@ -89,6 +89,14 @@ self.addEventListener('fetch', (event) => {
           cache.put(request, responseToCache);
         });
         return response;
+      }).catch((error) => {
+        // If fetch fails, log and return error
+        console.error('ServiceWorker fetch failed:', error);
+        // Return a basic error response instead of throwing
+        return new Response('Network error', {
+          status: 408,
+          headers: { 'Content-Type': 'text/plain' }
+        });
       });
     })
   );
