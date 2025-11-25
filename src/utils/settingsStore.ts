@@ -48,6 +48,19 @@ export interface AppSettings {
     // Enable background sync for offline support
     backgroundSync: boolean;
   };
+
+  // Audio Quality Settings
+  audio: {
+    // Transcode bitrate for FLAC/lossless files (in kbps)
+    // 320 = High (WiFi), 192 = Medium (Mobile), 128 = Low (Cellular)
+    transcodeBitrate: 128 | 192 | 320;
+    // Auto-adjust quality based on network type
+    adaptiveQuality: boolean;
+    // Preferred audio format for transcoding
+    transcodeFormat: 'mp3' | 'aac' | 'opus';
+    // Enable direct play for supported formats (skip transcoding)
+    directPlayEnabled: boolean;
+  };
 }
 
 // Default settings
@@ -68,6 +81,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
     preloadThumbnails: true,
     backgroundSync: false,
   },
+  audio: {
+    transcodeBitrate: 320, // High quality by default (WiFi)
+    adaptiveQuality: true, // Auto-adjust based on network
+    transcodeFormat: 'mp3', // Best browser compatibility
+    directPlayEnabled: true, // Skip transcoding when possible
+  },
 };
 
 interface SettingsStore extends AppSettings {
@@ -75,6 +94,7 @@ interface SettingsStore extends AppSettings {
   updateApiSettings: (settings: Partial<AppSettings['api']>) => void;
   updateUiSettings: (settings: Partial<AppSettings['ui']>) => void;
   updatePerformanceSettings: (settings: Partial<AppSettings['performance']>) => void;
+  updateAudioSettings: (settings: Partial<AppSettings['audio']>) => void;
   resetToDefaults: () => void;
   exportSettings: () => string;
   importSettings: (json: string) => boolean;
@@ -131,6 +151,15 @@ export const useSettingsStore = create<SettingsStore>()(
       },
 
       /**
+       * Update audio quality settings (bitrate, format, adaptive)
+       */
+      updateAudioSettings: (settings: Partial<AppSettings['audio']>) => {
+        set((state) => ({
+          audio: { ...state.audio, ...settings },
+        }));
+      },
+
+      /**
        * Reset all settings to defaults
        */
       resetToDefaults: () => {
@@ -147,6 +176,7 @@ export const useSettingsStore = create<SettingsStore>()(
           api: state.api,
           ui: state.ui,
           performance: state.performance,
+          audio: state.audio,
         };
         return JSON.stringify(settings, null, 2);
       },
@@ -177,11 +207,21 @@ export const useSettingsStore = create<SettingsStore>()(
             return false;
           }
 
-          // Apply imported settings
+          // Validate audio settings if present
+          if (imported.audio) {
+            const validBitrates = [128, 192, 320];
+            if (!validBitrates.includes(imported.audio.transcodeBitrate)) {
+              console.error('Invalid transcode bitrate (must be 128, 192, or 320)');
+              return false;
+            }
+          }
+
+          // Apply imported settings (use defaults for audio if not present)
           set({
             api: imported.api,
             ui: imported.ui,
             performance: imported.performance,
+            audio: imported.audio || DEFAULT_SETTINGS.audio,
           });
 
           return true;

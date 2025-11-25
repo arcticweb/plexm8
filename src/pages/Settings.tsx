@@ -20,15 +20,17 @@ function Settings() {
     api,
     ui,
     performance,
+    audio,
     updateApiSettings,
     updateUiSettings,
     updatePerformanceSettings,
+    updateAudioSettings,
     resetToDefaults,
     exportSettings,
     importSettings,
   } = useSettingsStore();
 
-  const [activeTab, setActiveTab] = useState<'api' | 'ui' | 'performance' | 'advanced'>('api');
+  const [activeTab, setActiveTab] = useState<'api' | 'ui' | 'performance' | 'audio' | 'advanced'>('api');
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
 
@@ -109,6 +111,12 @@ function Settings() {
           onClick={() => setActiveTab('performance')}
         >
           Performance
+        </button>
+        <button
+          className={activeTab === 'audio' ? 'active' : ''}
+          onClick={() => setActiveTab('audio')}
+        >
+          🎵 Audio Quality
         </button>
         <button
           className={activeTab === 'advanced' ? 'active' : ''}
@@ -353,6 +361,116 @@ function Settings() {
                   Sync data in the background for offline support (experimental)
                 </span>
               </label>
+            </div>
+          </div>
+        )}
+
+        {/* Audio Quality Settings Tab */}
+        {activeTab === 'audio' && (
+          <div className="settings-section">
+            <h2>🎵 Audio Quality</h2>
+            <p className="section-description">
+              Configure audio transcoding and playback quality for different network conditions
+            </p>
+
+            <div className="setting-group">
+              <label htmlFor="transcode-bitrate">
+                Transcode Bitrate
+                <span className="setting-help">
+                  Quality for FLAC/lossless files. Higher = better quality, more bandwidth.
+                  <br />
+                  • 320 kbps - High (WiFi/Home) - Near transparent quality
+                  <br />
+                  • 192 kbps - Medium (Mobile Data) - Good balance
+                  <br />
+                  • 128 kbps - Low (Cellular/Limited Data) - Acceptable quality
+                </span>
+              </label>
+              <select
+                id="transcode-bitrate"
+                value={audio.transcodeBitrate}
+                onChange={(e) =>
+                  updateAudioSettings({ transcodeBitrate: parseInt(e.target.value) as 128 | 192 | 320 })
+                }
+                className="setting-select"
+              >
+                <option value="320">320 kbps - High Quality (WiFi)</option>
+                <option value="192">192 kbps - Medium Quality (Mobile)</option>
+                <option value="128">128 kbps - Low Quality (Cellular)</option>
+              </select>
+              <span className="setting-value">
+                Current: {audio.transcodeBitrate} kbps (~{Math.round(audio.transcodeBitrate / 8)} KB/s)
+              </span>
+            </div>
+
+            <div className="setting-group">
+              <label htmlFor="transcode-format">
+                Transcode Format
+                <span className="setting-help">
+                  Audio codec for transcoded files. MP3 has best browser compatibility.
+                </span>
+              </label>
+              <select
+                id="transcode-format"
+                value={audio.transcodeFormat}
+                onChange={(e) =>
+                  updateAudioSettings({ transcodeFormat: e.target.value as 'mp3' | 'aac' | 'opus' })
+                }
+                className="setting-select"
+              >
+                <option value="mp3">MP3 (Best compatibility)</option>
+                <option value="aac">AAC (Better quality)</option>
+                <option value="opus">Opus (Most efficient)</option>
+              </select>
+              <span className="setting-value">
+                Current: {audio.transcodeFormat.toUpperCase()}
+              </span>
+            </div>
+
+            <div className="setting-group">
+              <label htmlFor="adaptive-quality">
+                <input
+                  id="adaptive-quality"
+                  type="checkbox"
+                  checked={audio.adaptiveQuality}
+                  onChange={(e) =>
+                    updateAudioSettings({ adaptiveQuality: e.target.checked })
+                  }
+                />
+                Adaptive Quality (Experimental)
+                <span className="setting-help">
+                  Automatically adjust bitrate based on network type (WiFi vs Mobile)
+                </span>
+              </label>
+            </div>
+
+            <div className="setting-group">
+              <label htmlFor="direct-play">
+                <input
+                  id="direct-play"
+                  type="checkbox"
+                  checked={audio.directPlayEnabled}
+                  onChange={(e) =>
+                    updateAudioSettings({ directPlayEnabled: e.target.checked })
+                  }
+                />
+                Direct Play (Recommended)
+                <span className="setting-help">
+                  Skip transcoding for browser-compatible formats (MP3, M4A, OGG).
+                  Disabling forces all audio through transcoder.
+                </span>
+              </label>
+            </div>
+
+            <div className="alert alert-info" style={{ marginTop: '1rem' }}>
+              <strong>💡 Tips:</strong>
+              <ul style={{ marginLeft: '1.5rem', marginTop: '0.5rem' }}>
+                <li><strong>WiFi/Home:</strong> Use 320 kbps for best quality</li>
+                <li><strong>Mobile Data:</strong> Use 192 kbps to balance quality and data usage</li>
+                <li><strong>Limited Data:</strong> Use 128 kbps to conserve bandwidth</li>
+                <li><strong>FLAC files:</strong> Automatically transcoded using these settings</li>
+                <li><strong>MP3/M4A files:</strong> Play directly (no transcoding needed)</li>
+              </ul>
             </div>
           </div>
         )}

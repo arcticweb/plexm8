@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useQueueStore } from '../utils/queueStore';
 import { formatTime } from '../hooks/useAudioPlayer';
-import { useAuthStore } from '../utils/storage';
+import { useAuthStore, getOrCreateClientId } from '../utils/storage';
 import { useServerStore } from '../utils/serverContext';
 import { selectBestConnection } from '../utils/connectionSelector';
 import { getArtworkUrl } from '../hooks/usePlaylistTracks';
+import { logger } from '../utils/logger';
+import { useSettingsStore } from '../utils/settingsStore';
 
 /**
  * Now Playing Component
@@ -26,6 +28,7 @@ export default function NowPlaying() {
   const { getSelectedServer } = useServerStore();
   const selectedServer = getSelectedServer();
   const serverUrl = selectedServer ? selectBestConnection(selectedServer) : null;
+  const { audio: audioSettings } = useSettingsStore(); // Get user's audio quality settings
   
   // Persist minimize state in localStorage
   const [isMinimized, setIsMinimized] = useState(() => {
@@ -70,12 +73,41 @@ export default function NowPlaying() {
                           problematicFormats.includes(fileExt || '');
     
     if (needsTranscode) {
-      console.warn(`[NowPlaying] ⚠️ Unsupported format: ${track.title || 'Unknown'} (${fileExt || container}) - Skipping`);
+      logger.warn('NowPlaying', `⚠️ Unsupported format: ${track.title || 'Unknown'} (${fileExt || container}) - Skipping`);
       // WMA/ASF/WMV cannot be transcoded in browser - Plex API restriction
       return { url: '', requiresHeaders: false };
     }
     
-    // Direct streaming for all supported formats
+    // Use Plex transcode API for FLAC files (browser-compatible conversion)
+    if (fileExt === 'flac' || container === 'flac') {
+      const bitrate = audioSettings.transcodeBitrate; // User-configured bitrate
+      logger.info('NowPlaying', `FLAC detected: ${track.title} - transcoding to ${bitrate} kbps MP3`);
+      
+      // Use Plex universal transcode decision endpoint
+      // This will automatically convert FLAC to MP3 for browser compatibility
+      const clientId = getOrCreateClientId();
+      const transcodeUrl = `${serverUrl}/music/:/transcode/universal/decision` +
+        `?path=${encodeURIComponent(track.key)}` +
+        `&mediaIndex=0` +
+        `&partIndex=0` +
+        `&protocol=http` +
+        `&fastSeek=1` +
+        `&directPlay=0` +  // Force transcode (don't try direct play)
+        `&directStream=0` +  // Force transcode (don't try direct stream)
+        `&audioCodec=mp3` +  // Target codec: MP3 (widely supported)
+        `&musicBitrate=${bitrate}` +  // User's preferred bitrate (128/192/320 kbps)
+        `&X-Plex-Token=${token}` +
+        `&X-Plex-Client-Identifier=${clientId}` +
+        `&X-Plex-Product=PlexM8` +
+        `&X-Plex-Platform=Web`;
+      
+      return {
+        url: transcodeUrl,
+        requiresHeaders: false,
+      };
+    }
+    
+    // Direct streaming for all other supported formats
     // Let browser handle playback normally - fetch+blob causes HTTP 500 errors
     if (mediaPart?.key) {
       return {
@@ -111,7 +143,7 @@ export default function NowPlaying() {
             controls.play();
           } else {
             // URL is empty (unsupported format) - skip to next track
-            console.log('[NowPlaying] Skipping unsupported track, moving to next');
+            logger.info('NowPlaying', 'Skipping unsupported track, moving to next');
             // Recursively skip (will be handled by next render cycle)
           }
         }
@@ -129,19 +161,19 @@ export default function NowPlaying() {
       // Ignore "aborted by user" errors - these happen when user clicks pause
       if (playerState.error.includes('aborted by the user') || 
           playerState.error.includes('aborted by user')) {
-        console.log('[NowPlaying] Ignoring user-initiated abort');
+        logger.debug('NowPlaying', 'Ignoring user-initiated abort');
         return;
       }
       
       // Rate limit error handling to prevent React error #185 (too many renders)
       const now = Date.now();
       if (now - lastErrorTime < 1000) { // Increased from 500ms to 1000ms
-        console.warn('[NowPlaying] Error handling rate limited, skipping');
+        logger.debug('NowPlaying', 'Error handling rate limited, skipping');
         return;
       }
       setLastErrorTime(now);
       
-      console.error('[NowPlaying] Playback error (will skip):', playerState.error);
+      logger.error('NowPlaying', 'Playback error (will skip):', playerState.error);
       
       // Skip to next track on actual errors
       setRetriedWithTranscode(false);

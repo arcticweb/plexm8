@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { logger } from '../utils/logger';
 
 /**
  * Audio player state
@@ -131,13 +132,25 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
       const errorMessage = audio.error 
         ? `Audio error: ${audio.error.message}` 
         : 'Unknown audio error';
+      
+      // Log detailed error info for debugging
+      logger.error('AudioPlayer', 'Playback error:', {
+        code: audio.error?.code,
+        message: audio.error?.message,
+        src: audio.src?.substring(0, 100),
+      });
+      
+      // Check for FLAC OpaqueResponseBlocking issue
+      if (audio.src && audio.src.includes('.flac')) {
+        logger.warn('AudioPlayer', 'FLAC file blocked by browser - this is a known issue with direct FLAC streaming');
+      }
+      
       setState((prev) => ({ 
         ...prev, 
         error: errorMessage,
         isLoading: false,
         isPlaying: false,
       }));
-      console.error('Audio playback error:', audio.error);
     };
 
     // Attach event listeners
@@ -171,19 +184,29 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
 
   // Control functions
   const play = useCallback(async () => {
-    if (!audioRef.current) return;
+    if (!audioRef.current) {
+      logger.warn('AudioPlayer', 'Cannot play: audioRef is null');
+      return;
+    }
+    
+    if (!audioRef.current.src) {
+      logger.warn('AudioPlayer', 'Cannot play: no source loaded');
+      return;
+    }
+    
     try {
+      logger.debug('AudioPlayer', `Playing: ${audioRef.current.src.substring(0, 100)}...`);
       await audioRef.current.play();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Play failed';
       
       // Ignore "aborted by user" errors - these are normal when user clicks pause
       if (errorMsg.includes('aborted by the user') || errorMsg.includes('aborted by user')) {
-        console.log('[AudioPlayer] Play aborted by user (normal)');
+        logger.debug('AudioPlayer', 'Play aborted by user (normal)');
         return;
       }
       
-      console.error('[AudioPlayer] Play failed:', error);
+      logger.error('AudioPlayer', 'Play failed:', error);
       setState((prev) => ({ 
         ...prev, 
         error: errorMsg,
@@ -193,6 +216,7 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
 
   const pause = useCallback(() => {
     if (!audioRef.current) return;
+    logger.debug('AudioPlayer', 'Pausing playback');
     audioRef.current.pause();
   }, []);
 
@@ -223,6 +247,8 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
   const loadTrack = useCallback(async (url: string, requiresHeaders: boolean = false, clientId?: string) => {
     if (!audioRef.current) return;
     
+    logger.info('AudioPlayer', `Loading track: ${url.substring(url.lastIndexOf('/') + 1, url.indexOf('?'))}`);
+    
     // Stop current playback
     audioRef.current.pause();
     audioRef.current.currentTime = 0;
@@ -232,7 +258,7 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
       try {
         setState((prev) => ({ ...prev, isLoading: true, error: null }));
         
-        console.log('[AudioPlayer] Fetching transcode with headers:', url);
+        logger.debug('AudioPlayer', 'Fetching with custom headers:', url);
         
         const response = await fetch(url, {
           method: 'GET',
@@ -270,7 +296,7 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
           error: null,
         }));
       } catch (error) {
-        console.error('Fetch track with headers failed:', error);
+        logger.error('AudioPlayer', 'Fetch with headers failed:', error);
         setState((prev) => ({ 
           ...prev, 
           isLoading: false,
@@ -293,7 +319,7 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
     try {
       await audioRef.current.load();
     } catch (error) {
-      console.error('Load track failed:', error);
+      logger.error('AudioPlayer', 'Load track failed:', error);
       setState((prev) => ({ 
         ...prev, 
         error: error instanceof Error ? error.message : 'Failed to load track',

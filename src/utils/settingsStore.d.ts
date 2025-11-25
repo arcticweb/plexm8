@@ -29,12 +29,19 @@ export interface AppSettings {
         preloadThumbnails: boolean;
         backgroundSync: boolean;
     };
+    audio: {
+        transcodeBitrate: 128 | 192 | 320;
+        adaptiveQuality: boolean;
+        transcodeFormat: 'mp3' | 'aac' | 'opus';
+        directPlayEnabled: boolean;
+    };
 }
 export declare const DEFAULT_SETTINGS: AppSettings;
 interface SettingsStore extends AppSettings {
     updateApiSettings: (settings: Partial<AppSettings['api']>) => void;
     updateUiSettings: (settings: Partial<AppSettings['ui']>) => void;
     updatePerformanceSettings: (settings: Partial<AppSettings['performance']>) => void;
+    updateAudioSettings: (settings: Partial<AppSettings['audio']>) => void;
     resetToDefaults: () => void;
     exportSettings: () => string;
     importSettings: (json: string) => boolean;

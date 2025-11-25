@@ -1665,11 +1665,13 @@ body {
   font-size: 2rem;
   background: var(--color-primary);
   color: white;
+  transition: all 0.2s ease;
 }
 
 .control-btn.play-pause:hover {
-  background: #ff0a16;
-  transform: scale(1.05);
+  background: #ff3d47;
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(229, 9, 20, 0.5);
 }
 
 .control-btn.active {
