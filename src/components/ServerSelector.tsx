@@ -18,6 +18,10 @@ export default function ServerSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  
+  // Rate limiting: minimum 5 seconds between refreshes (industry standard)
+  const REFRESH_COOLDOWN_MS = 5000;
 
   const selectedServer = servers.find((s) => s.clientIdentifier === selectedServerId);
 
@@ -27,9 +31,19 @@ export default function ServerSelector() {
       return;
     }
 
+    // Rate limiting: prevent spam refreshes
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTime;
+    if (timeSinceLastFetch < REFRESH_COOLDOWN_MS && lastFetchTime > 0) {
+      const remainingSeconds = Math.ceil((REFRESH_COOLDOWN_MS - timeSinceLastFetch) / 1000);
+      console.log(`[ServerSelector] Rate limited. Wait ${remainingSeconds}s before refreshing.`);
+      return; // Silently ignore - user will see no response, preventing button spam
+    }
+
     try {
       setIsLoading(true);
       setError(null);
+      setLastFetchTime(now);
 
       const clientId = getOrCreateClientId();
       const timeout = useSettingsStore.getState().api.timeout;
@@ -105,12 +119,12 @@ export default function ServerSelector() {
           <div className="server-menu-header">
             <h3>Plex Servers</h3>
             <button
-              className="server-refresh-button"
+              className={`server-refresh-button ${isLoading ? 'spinning' : ''}`}
               onClick={fetchServers}
               disabled={isLoading}
-              title="Refresh servers"
+              title={isLoading ? 'Refreshing...' : 'Refresh servers'}
             >
-              {isLoading ? '⟳' : '↻'}
+              ↻
             </button>
           </div>
 

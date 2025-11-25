@@ -3,6 +3,7 @@ import { useAuthStore, getOrCreateClientId } from '../utils/storage';
 import { useServerStore } from '../utils/serverContext';
 import { selectBestConnection } from '../utils/connectionSelector';
 import { plexFetch } from '../utils/plexFetch';
+import { logger } from '../utils/logger';
 
 /**
  * Track metadata from Plex
@@ -204,10 +205,10 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
         setPlaylistDetail(initialDetail);
         setLoadingProgress({ loaded: allTracks.length, total: trackCount });
 
-        console.log(`[Playlist] Loaded first ${allTracks.length} tracks in ${Date.now() - startTime}ms`);
-
         // Fetch remaining batches in background
         const totalBatches = Math.ceil(trackCount / BATCH_SIZE);
+        logger.info('Playlist', `Loading ${trackCount} tracks in ${totalBatches} batches...`);
+        logger.debug('Playlist', `First batch: ${allTracks.length} tracks in ${Date.now() - startTime}ms`);
         for (let batchIndex = 1; batchIndex < totalBatches; batchIndex++) {
           const offset = batchIndex * BATCH_SIZE;
           const batchUrl = `${serverUrl}${endpointPath}?X-Plex-Container-Start=${offset}&X-Plex-Container-Size=${BATCH_SIZE}`;
@@ -243,10 +244,11 @@ export function usePlaylistTracks(playlistKey: string | null, trackCount?: numbe
           });
           setLoadingProgress({ loaded: allTracks.length, total: trackCount });
 
-          console.log(`[Playlist] Loaded batch ${batchIndex + 1}/${totalBatches} (${allTracks.length}/${trackCount} tracks)`);
+          // Only log progress at DEBUG level (too verbose for normal use)
+          logger.debug('Playlist', `Batch ${batchIndex + 1}/${totalBatches} (${allTracks.length}/${trackCount} tracks)`);
         }
 
-        console.log(`[Playlist] Completed loading all ${allTracks.length} tracks in ${Date.now() - startTime}ms`);
+        logger.info('Playlist', `Loaded ${allTracks.length} tracks in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
         setLoadingProgress(null);
       } else {
         // Small playlist - load all at once

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { logger } from './logger';
 
 /**
  * Track in the playback queue
@@ -425,7 +426,7 @@ export const useQueueStore = create<QueueState>()(
         const MAX_PERSISTED_QUEUE_SIZE = 100;
         
         if (state.queue.length > MAX_PERSISTED_QUEUE_SIZE) {
-          console.log(`[Queue] Large queue detected (${state.queue.length} tracks), persisting only current track and playback state`);
+          logger.debug('Queue', `Large queue (${state.queue.length} tracks), persisting windowed subset`);
           
           // Only persist current track and a small window around it
           const startIdx = Math.max(0, state.currentIndex - 10);
@@ -455,15 +456,15 @@ export const useQueueStore = create<QueueState>()(
       onRehydrateStorage: () => {
         return (state, error) => {
           if (error) {
-            console.error('[Queue] Error rehydrating from localStorage:', error);
+            logger.error('Queue', 'Error rehydrating from localStorage:', error);
             // Clear corrupted data
             try {
               localStorage.removeItem('plexm8-queue');
             } catch (e) {
-              console.error('[Queue] Failed to clear corrupted queue data:', e);
+              logger.error('Queue', 'Failed to clear corrupted queue data:', e);
             }
           } else if (state && (state as any)._originalQueueSize) {
-            console.log(`[Queue] Restored windowed queue from large playlist (${(state as any)._originalQueueSize} total tracks)`);
+            logger.info('Queue', `Restored windowed queue from large playlist (${(state as any)._originalQueueSize} total tracks)`);
           }
         };
       },

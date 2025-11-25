@@ -458,21 +458,39 @@ body {
   background: none;
   border: none;
   color: var(--color-primary);
-  font-size: 1rem;
+  font-size: 1.2rem;
   cursor: pointer;
   padding: var(--spacing-xs);
   border-radius: var(--radius-sm);
-  transition: var(--transition);
+  transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
 }
 
 .server-refresh-button:hover:not(:disabled) {
   background: rgba(229, 9, 20, 0.1);
-  transform: rotate(90deg);
 }
 
 .server-refresh-button:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Spinning animation for refresh button */
+.server-refresh-button.spinning {
+  animation: spin 1s linear infinite;
+  pointer-events: none; /* Prevent clicks during refresh */
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .server-menu-list {

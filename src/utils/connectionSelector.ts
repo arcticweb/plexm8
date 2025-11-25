@@ -9,6 +9,7 @@
  */
 
 import { PlexServer } from './serverContext';
+import { logger } from './logger';
 
 export interface ConnectionInfo {
   protocol: string;
@@ -139,13 +140,14 @@ export function selectBestConnection(server: PlexServer): string | null {
 
   const bestConnection = scoredConnections[0].connection;
   
-  // Debug logging
-  console.log('[Connection] Available connections:', server.connections.length);
-  console.log('[Connection] Prefer local:', preferLocal);
-  console.log('[Connection] Selected:', bestConnection.uri, '(relay:', bestConnection.relay, ')');
+  // Debug logging (only visible at DEBUG level)
+  logger.debug('Connection', `Available: ${server.connections.length}, Prefer local: ${preferLocal}`);
+  logger.debug('Connection', `Selected: ${bestConnection.uri} (relay: ${bestConnection.relay})`);
+  
+  // Warn about relay connections (visible at WARN level)
   if (bestConnection.relay) {
-    console.warn('[Connection] ⚠️ Using relay connection - may cause issues with FLAC files');
-    console.warn('[Connection] Consider enabling Remote Access or port forwarding for better performance');
+    logger.warn('Connection', '⚠️ Using relay connection - may cause issues with FLAC files');
+    logger.warn('Connection', 'Consider enabling Remote Access or port forwarding for better performance');
   }
 
   return bestConnection.uri;
@@ -194,7 +196,7 @@ export async function validateConnection(
     });
     return response.ok;
   } catch (error) {
-    console.warn(`Connection validation failed for ${uri}:`, error);
+    logger.warn('Connection', `Validation failed for ${uri}:`, error);
     return false;
   }
 }
