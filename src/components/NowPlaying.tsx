@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useQueueStore } from '../utils/queueStore';
 import { formatTime } from '../hooks/useAudioPlayer';
@@ -124,20 +124,31 @@ export default function NowPlaying() {
     ? getArtworkUrl(serverUrl, currentTrack.thumb, token)
     : currentTrack?.thumb; // Fallback to stored URL if already full
 
+  // Track which URL was last loaded to prevent re-loading same track
+  const lastLoadedTrackKey = useRef<string | null>(null);
+
   // Load track into audio element when currentTrack changes
   useEffect(() => {
     if (currentTrack && serverUrl && token) {
+      const trackKey = currentTrack.ratingKey || '';
+      
+      // Skip if we already loaded this track
+      if (lastLoadedTrackKey.current === trackKey) {
+        return;
+      }
+      
       const trackInfo = buildTrackUrl(currentTrack);
       if (trackInfo.url) {
         const clientId = localStorage.getItem('clientId') || 'plexm8';
         logger.info('NowPlaying', `Loading track: ${currentTrack.title}`);
         controls.loadTrack(trackInfo.url, trackInfo.requiresHeaders, clientId);
+        lastLoadedTrackKey.current = trackKey;
         // Note: Not auto-playing here - user controls playback via play/pause button
       } else {
         logger.warn('NowPlaying', `Cannot load track: no URL for ${currentTrack.title}`);
       }
     }
-  }, [currentTrack?.ratingKey, serverUrl, token]); // Re-run when track changes or connection changes
+  }, [currentTrack?.ratingKey, serverUrl, token, controls, buildTrackUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-play next track when current track ends
   useEffect(() => {

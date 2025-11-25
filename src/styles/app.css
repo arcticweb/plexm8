@@ -885,6 +885,7 @@ body {
   max-width: 900px;
   margin: 0 auto;
   padding: var(--spacing-xl);
+  padding-bottom: 200px; /* Extra space to prevent NowPlaying player from covering settings */
 }
 
 .settings-header {
