@@ -222,12 +222,17 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
 
   const togglePlayPause = useCallback(async () => {
     if (!audioRef.current) return;
-    if (state.isPlaying) {
+    
+    // Use audio element's paused property directly to avoid stale closure
+    // state.isPlaying can be stale when this callback executes
+    if (!audioRef.current.paused) {
+      logger.debug('AudioPlayer', 'Toggle: pausing');
       pause();
     } else {
+      logger.debug('AudioPlayer', 'Toggle: playing');
       await play();
     }
-  }, [state.isPlaying, play, pause]);
+  }, [play, pause]);
 
   const seek = useCallback((time: number) => {
     if (!audioRef.current) return;
