@@ -7,6 +7,7 @@ import { selectBestConnection } from '../utils/connectionSelector';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
 import { useQueueStore, QueueTrack } from '../utils/queueStore';
 import TrackInfoModal from '../components/TrackInfoModal';
+import { useSettingsStore } from '../utils/settingsStore';
 
 /**
  * Playlist Detail Component
@@ -46,21 +47,35 @@ export default function PlaylistDetail() {
   const [tracksPerPage, setTracksPerPage] = useState(50); // Default 50 tracks per page
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Get filtering settings
+  const { filtering } = useSettingsStore();
+
   // Filter and paginate tracks
   const filteredTracks = useMemo(() => {
     if (!playlistDetail?.tracks) return [];
     
+    let tracks = playlistDetail.tracks;
+    
+    // Filter by format compatibility if hideIncompatible is enabled
+    if (filtering.hideIncompatible) {
+      tracks = tracks.filter((track: Track) => {
+        const { supported } = isTrackSupported(track);
+        return supported;
+      });
+    }
+    
+    // Filter by search query
     if (!searchQuery.trim()) {
-      return playlistDetail.tracks;
+      return tracks;
     }
 
     const query = searchQuery.toLowerCase();
-    return playlistDetail.tracks.filter((track: Track) => 
+    return tracks.filter((track: Track) => 
       track.title.toLowerCase().includes(query) ||
       (track.artist && track.artist.toLowerCase().includes(query)) ||
       (track.album && track.album.toLowerCase().includes(query))
     );
-  }, [playlistDetail?.tracks, searchQuery]);
+  }, [playlistDetail?.tracks, searchQuery, filtering.hideIncompatible, filtering.hiddenFormats]);
 
   // Calculate pagination
   const totalTracks = filteredTracks.length;
@@ -90,9 +105,9 @@ export default function PlaylistDetail() {
     const container = mediaPart?.container?.toLowerCase();
     const fileExt = mediaPart?.key?.split('.').pop()?.toLowerCase() || 'unknown';
     
-    const unsupportedFormats = ['wma', 'wmv', 'asf', 'wv'];
-    const isUnsupported = unsupportedFormats.includes(container || '') ||
-                          unsupportedFormats.includes(fileExt || '');
+    // Use hiddenFormats from settings instead of hardcoded list
+    const isUnsupported = filtering.hiddenFormats.includes(container || '') ||
+                          filtering.hiddenFormats.includes(fileExt || '');
     
     if (isUnsupported) {
       return {
@@ -313,6 +328,11 @@ export default function PlaylistDetail() {
         <div className="track-pagination-info">
           <span>
             Showing {startIndex + 1}-{endIndex} of {totalTracks} tracks
+            {filtering.hideIncompatible && playlistDetail?.tracks && totalTracks < playlistDetail.tracks.length && (
+              <span className="filter-notice" title="Some tracks are hidden due to incompatible formats">
+                {' '}({playlistDetail.tracks.length - totalTracks} hidden)
+              </span>
+            )}
           </span>
           <select 
             value={tracksPerPage} 

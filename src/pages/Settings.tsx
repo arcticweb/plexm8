@@ -21,16 +21,18 @@ function Settings() {
     ui,
     performance,
     audio,
+    filtering,
     updateApiSettings,
     updateUiSettings,
     updatePerformanceSettings,
     updateAudioSettings,
+    updateFilteringSettings,
     resetToDefaults,
     exportSettings,
     importSettings,
   } = useSettingsStore();
 
-  const [activeTab, setActiveTab] = useState<'api' | 'ui' | 'performance' | 'audio' | 'advanced'>('api');
+  const [activeTab, setActiveTab] = useState<'api' | 'ui' | 'performance' | 'audio' | 'filtering' | 'advanced'>('api');
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState(false);
 
@@ -117,6 +119,12 @@ function Settings() {
           onClick={() => setActiveTab('audio')}
         >
           🎵 Audio Quality
+        </button>
+        <button
+          className={activeTab === 'filtering' ? 'active' : ''}
+          onClick={() => setActiveTab('filtering')}
+        >
+          🔇 Track Filtering
         </button>
         <button
           className={activeTab === 'advanced' ? 'active' : ''}
@@ -471,6 +479,93 @@ function Settings() {
                 <li><strong>FLAC files:</strong> Automatically transcoded using these settings</li>
                 <li><strong>MP3/M4A files:</strong> Play directly (no transcoding needed)</li>
               </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Track Filtering Settings Tab */}
+        {activeTab === 'filtering' && (
+          <div className="settings-section">
+            <h2>🔇 Track Filtering</h2>
+            <p className="section-description">
+              Control which tracks are displayed based on file format compatibility
+            </p>
+
+            <div className="setting-group">
+              <label htmlFor="hide-incompatible">
+                <input
+                  id="hide-incompatible"
+                  type="checkbox"
+                  checked={filtering.hideIncompatible}
+                  onChange={(e) =>
+                    updateFilteringSettings({ hideIncompatible: e.target.checked })
+                  }
+                />
+                Hide Incompatible Tracks
+                <span className="setting-help">
+                  Automatically hide tracks with formats that cannot be played in the browser.
+                  This reduces clutter and prevents playback errors. Recommended: ON
+                </span>
+              </label>
+            </div>
+
+            <div className="setting-group">
+              <label htmlFor="show-format-warnings">
+                <input
+                  id="show-format-warnings"
+                  type="checkbox"
+                  checked={filtering.showFormatWarnings}
+                  onChange={(e) =>
+                    updateFilteringSettings({ showFormatWarnings: e.target.checked })
+                  }
+                />
+                Show Format Warning Badges
+                <span className="setting-help">
+                  Display warning badges on tracks that may require transcoding (e.g., FLAC).
+                  Helps identify which tracks will use more bandwidth.
+                </span>
+              </label>
+            </div>
+
+            <div className="setting-group">
+              <label htmlFor="hidden-formats">
+                Hidden File Formats
+                <span className="setting-help">
+                  Comma-separated list of file extensions to hide (e.g., wma, asf, wmv).
+                  These formats are known to cause playback issues in browsers.
+                </span>
+              </label>
+              <input
+                id="hidden-formats"
+                type="text"
+                value={filtering.hiddenFormats.join(', ')}
+                onChange={(e) => {
+                  const formats = e.target.value
+                    .split(',')
+                    .map(f => f.trim().toLowerCase())
+                    .filter(f => f.length > 0);
+                  updateFilteringSettings({ hiddenFormats: formats });
+                }}
+                placeholder="wma, asf, wmv"
+              />
+              <span className="setting-value">
+                Current: {filtering.hiddenFormats.join(', ') || 'None'}
+                (Default: {DEFAULT_SETTINGS.filtering.hiddenFormats.join(', ')})
+              </span>
+            </div>
+
+            <div className="alert alert-info" style={{ marginTop: '1rem' }}>
+              <strong>💡 Why filter tracks?</strong>
+              <ul style={{ marginLeft: '1.5rem', marginTop: '0.5rem' }}>
+                <li><strong>WMA/ASF/WMV:</strong> Windows Media formats not supported by most browsers</li>
+                <li><strong>Browser Limitations:</strong> Some formats require plugins or cause errors</li>
+                <li><strong>Cleaner Interface:</strong> Hiding incompatible tracks reduces confusion</li>
+                <li><strong>Better Experience:</strong> No playback errors from unsupported files</li>
+              </ul>
+              <p style={{ marginTop: '0.5rem', marginBottom: 0 }}>
+                <strong>Note:</strong> If Plex server reports "Network Error (s1001)" for specific tracks, 
+                add their file extension to the hidden formats list.
+              </p>
             </div>
           </div>
         )}

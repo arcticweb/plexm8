@@ -125,30 +125,7 @@ export default function NowPlaying() {
     : currentTrack?.thumb; // Fallback to stored URL if already full
 
   // Track which URL was last loaded to prevent re-loading same track
-  const lastLoadedTrackKey = useRef<string | null>(null);
-
-  // Load track into audio element when currentTrack changes
-  useEffect(() => {
-    if (currentTrack && serverUrl && token) {
-      const trackKey = currentTrack.ratingKey || '';
-      
-      // Skip if we already loaded this track
-      if (lastLoadedTrackKey.current === trackKey) {
-        return;
-      }
-      
-      const trackInfo = buildTrackUrl(currentTrack);
-      if (trackInfo.url) {
-        const clientId = localStorage.getItem('clientId') || 'plexm8';
-        logger.info('NowPlaying', `Loading track: ${currentTrack.title}`);
-        controls.loadTrack(trackInfo.url, trackInfo.requiresHeaders, clientId);
-        lastLoadedTrackKey.current = trackKey;
-        // Note: Not auto-playing here - user controls playback via play/pause button
-      } else {
-        logger.warn('NowPlaying', `Cannot load track: no URL for ${currentTrack.title}`);
-      }
-    }
-  }, [currentTrack?.ratingKey]); // Only depend on track change, not functions
+  const lastLoadedUrl = useRef<string | null>(null);
 
   // Auto-play next track when current track ends
   useEffect(() => {
@@ -191,6 +168,13 @@ export default function NowPlaying() {
         return;
       }
       
+      // Ignore "interrupted by pause" errors - these happen during normal playback control
+      if (playerState.error.includes('interrupted by a call to pause') ||
+          playerState.error.includes('interrupted by pause')) {
+        logger.debug('NowPlaying', 'Ignoring play interrupted by pause (normal)');
+        return;
+      }
+      
       // Rate limit error handling to prevent React error #185 (too many renders)
       const now = Date.now();
       if (now - lastErrorTime < 1000) { // Increased from 500ms to 1000ms
@@ -224,8 +208,31 @@ export default function NowPlaying() {
     }
   }, [playerState.isPlaying, playerState.error]);
 
-  const handlePlayPause = () => {
-    controls.togglePlayPause();
+  const handlePlayPause = async () => {
+    if (!currentTrack || !serverUrl || !token) {
+      logger.warn('NowPlaying', 'Cannot play: no track or server');
+      return;
+    }
+    
+    // If trying to play (currently paused) and track needs loading
+    if (!playerState.isPlaying) {
+      const trackInfo = buildTrackUrl(currentTrack);
+      const trackUrl = trackInfo.url;
+      
+      // Only load if URL changed (new track)
+      if (trackUrl && trackUrl !== lastLoadedUrl.current) {
+        const clientId = localStorage.getItem('clientId') || 'plexm8';
+        logger.info('NowPlaying', `Loading new track: ${currentTrack.title}`);
+        await controls.loadTrack(trackUrl, trackInfo.requiresHeaders, clientId);
+        lastLoadedUrl.current = trackUrl;
+        // Now play the loaded track
+        await controls.play();
+        return;
+      }
+    }
+    
+    // Track already loaded, just toggle play/pause
+    await controls.togglePlayPause();
   };
 
   const handleNext = () => {

@@ -35,6 +35,11 @@ export interface AppSettings {
         transcodeFormat: 'mp3' | 'aac' | 'opus';
         directPlayEnabled: boolean;
     };
+    filtering: {
+        hideIncompatible: boolean;
+        hiddenFormats: string[];
+        showFormatWarnings: boolean;
+    };
 }
 export declare const DEFAULT_SETTINGS: AppSettings;
 interface SettingsStore extends AppSettings {
@@ -42,6 +47,7 @@ interface SettingsStore extends AppSettings {
     updateUiSettings: (settings: Partial<AppSettings['ui']>) => void;
     updatePerformanceSettings: (settings: Partial<AppSettings['performance']>) => void;
     updateAudioSettings: (settings: Partial<AppSettings['audio']>) => void;
+    updateFilteringSettings: (settings: Partial<AppSettings['filtering']>) => void;
     resetToDefaults: () => void;
     exportSettings: () => string;
     importSettings: (json: string) => boolean;

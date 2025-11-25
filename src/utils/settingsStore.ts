@@ -61,6 +61,16 @@ export interface AppSettings {
     // Enable direct play for supported formats (skip transcoding)
     directPlayEnabled: boolean;
   };
+
+  // Track Filtering Settings
+  filtering: {
+    // Hide tracks with known incompatible formats
+    hideIncompatible: boolean;
+    // List of file extensions to hide (e.g., ['wma', 'asf'])
+    hiddenFormats: string[];
+    // Show warning badge on potentially problematic formats
+    showFormatWarnings: boolean;
+  };
 }
 
 // Default settings
@@ -87,6 +97,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
     transcodeFormat: 'mp3', // Best browser compatibility
     directPlayEnabled: true, // Skip transcoding when possible
   },
+  filtering: {
+    hideIncompatible: true, // Hide problematic formats by default
+    hiddenFormats: ['wma', 'asf', 'wmv'], // Known problematic formats
+    showFormatWarnings: true, // Show warnings for FLAC, etc.
+  },
 };
 
 interface SettingsStore extends AppSettings {
@@ -95,6 +110,7 @@ interface SettingsStore extends AppSettings {
   updateUiSettings: (settings: Partial<AppSettings['ui']>) => void;
   updatePerformanceSettings: (settings: Partial<AppSettings['performance']>) => void;
   updateAudioSettings: (settings: Partial<AppSettings['audio']>) => void;
+  updateFilteringSettings: (settings: Partial<AppSettings['filtering']>) => void;
   resetToDefaults: () => void;
   exportSettings: () => string;
   importSettings: (json: string) => boolean;
@@ -160,6 +176,15 @@ export const useSettingsStore = create<SettingsStore>()(
       },
 
       /**
+       * Update track filtering settings (hide incompatible formats)
+       */
+      updateFilteringSettings: (settings: Partial<AppSettings['filtering']>) => {
+        set((state) => ({
+          filtering: { ...state.filtering, ...settings },
+        }));
+      },
+
+      /**
        * Reset all settings to defaults
        */
       resetToDefaults: () => {
@@ -177,6 +202,7 @@ export const useSettingsStore = create<SettingsStore>()(
           ui: state.ui,
           performance: state.performance,
           audio: state.audio,
+          filtering: state.filtering,
         };
         return JSON.stringify(settings, null, 2);
       },
@@ -216,12 +242,13 @@ export const useSettingsStore = create<SettingsStore>()(
             }
           }
 
-          // Apply imported settings (use defaults for audio if not present)
+          // Apply imported settings (use defaults for missing sections)
           set({
             api: imported.api,
             ui: imported.ui,
             performance: imported.performance,
             audio: imported.audio || DEFAULT_SETTINGS.audio,
+            filtering: imported.filtering || DEFAULT_SETTINGS.filtering,
           });
 
           return true;
