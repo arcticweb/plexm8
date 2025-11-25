@@ -124,6 +124,21 @@ export default function NowPlaying() {
     ? getArtworkUrl(serverUrl, currentTrack.thumb, token)
     : currentTrack?.thumb; // Fallback to stored URL if already full
 
+  // Load track into audio element when currentTrack changes
+  useEffect(() => {
+    if (currentTrack && serverUrl && token) {
+      const trackInfo = buildTrackUrl(currentTrack);
+      if (trackInfo.url) {
+        const clientId = localStorage.getItem('clientId') || 'plexm8';
+        logger.info('NowPlaying', `Loading track: ${currentTrack.title}`);
+        controls.loadTrack(trackInfo.url, trackInfo.requiresHeaders, clientId);
+        // Note: Not auto-playing here - user controls playback via play/pause button
+      } else {
+        logger.warn('NowPlaying', `Cannot load track: no URL for ${currentTrack.title}`);
+      }
+    }
+  }, [currentTrack?.ratingKey, serverUrl, token]); // Re-run when track changes or connection changes
+
   // Auto-play next track when current track ends
   useEffect(() => {
     // Track ended (time reset to 0, not playing, not loading)

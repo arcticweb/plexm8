@@ -86,10 +86,12 @@ export function useAudioPlayer(): [AudioPlayerState, AudioPlayerControls, HTMLAu
 
     // Event handlers
     const handlePlay = () => {
+      logger.debug('AudioPlayer', 'play event fired - updating state to isPlaying=true');
       setState((prev) => ({ ...prev, isPlaying: true, isPaused: false, error: null }));
     };
 
     const handlePause = () => {
+      logger.debug('AudioPlayer', 'pause event fired - updating state to isPlaying=false');
       setState((prev) => ({ ...prev, isPlaying: false, isPaused: true }));
     };
 
