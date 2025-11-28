@@ -50,6 +50,28 @@ export default function PlaylistDetail() {
   // Get filtering settings
   const { filtering } = useSettingsStore();
 
+  // Check if track format is supported in browser
+  // MUST be declared BEFORE useMemo that uses it (hoisting issue)
+  const isTrackSupported = (track: Track): { supported: boolean; format: string; reason: string } => {
+    const mediaPart = track.Media?.[0]?.Part?.[0];
+    const container = mediaPart?.container?.toLowerCase();
+    const fileExt = mediaPart?.key?.split('.').pop()?.toLowerCase() || 'unknown';
+    
+    // Use hiddenFormats from settings instead of hardcoded list
+    const isUnsupported = filtering.hiddenFormats.includes(container || '') ||
+                          filtering.hiddenFormats.includes(fileExt || '');
+    
+    if (isUnsupported) {
+      return {
+        supported: false,
+        format: fileExt.toUpperCase(),
+        reason: 'Not supported in web browsers. Use Plex app or convert to MP3/FLAC/M4A.',
+      };
+    }
+    
+    return { supported: true, format: fileExt.toUpperCase(), reason: '' };
+  };
+
   // Filter and paginate tracks
   const filteredTracks = useMemo(() => {
     if (!playlistDetail?.tracks) return [];
@@ -97,27 +119,6 @@ export default function PlaylistDetail() {
   const handleShowAll = () => {
     setCurrentPage(1);
     setTracksPerPage(totalTracks); // Show all tracks
-  };
-
-  // Check if track format is supported in browser
-  const isTrackSupported = (track: Track): { supported: boolean; format: string; reason: string } => {
-    const mediaPart = track.Media?.[0]?.Part?.[0];
-    const container = mediaPart?.container?.toLowerCase();
-    const fileExt = mediaPart?.key?.split('.').pop()?.toLowerCase() || 'unknown';
-    
-    // Use hiddenFormats from settings instead of hardcoded list
-    const isUnsupported = filtering.hiddenFormats.includes(container || '') ||
-                          filtering.hiddenFormats.includes(fileExt || '');
-    
-    if (isUnsupported) {
-      return {
-        supported: false,
-        format: fileExt.toUpperCase(),
-        reason: 'Not supported in web browsers. Use Plex app or convert to MP3/FLAC/M4A.',
-      };
-    }
-    
-    return { supported: true, format: fileExt.toUpperCase(), reason: '' };
   };
 
   const buildTrackUrl = (track: Track): { url: string; requiresHeaders: boolean } => {
